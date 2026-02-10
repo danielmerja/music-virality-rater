@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SoundCheck — Wireframe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f5f5; color: #333; }
+
+  /* Navigation */
+  .nav { display: flex; justify-content: center; gap: 8px; padding: 20px; background: #fff; border-bottom: 2px solid #e0e0e0; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; }
+  .nav button { padding: 10px 24px; border: 2px solid #ccc; background: #fff; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+  .nav button.active { background: #111; color: #fff; border-color: #111; }
+  .nav button:hover:not(.active) { border-color: #999; }
+
+  /* Screen container */
+  .screen { display: none; max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+  .screen.active { display: block; }
+  .screen-label { text-align: center; margin-bottom: 32px; }
+  .screen-label h2 { font-size: 28px; color: #111; }
+  .screen-label p { font-size: 14px; color: #888; margin-top: 4px; }
+
+  /* Wireframe phone frame */
+  .phone { width: 375px; margin: 0 auto; border: 3px solid #ccc; border-radius: 32px; background: #fff; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+  .phone-notch { width: 150px; height: 28px; background: #ccc; border-radius: 0 0 16px 16px; margin: 0 auto; }
+  .phone-body { padding: 16px; min-height: 700px; display: flex; flex-direction: column; }
+
+  /* Desktop frame */
+  .desktop { max-width: 960px; margin: 0 auto; border: 3px solid #ccc; border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+  .desktop-bar { height: 36px; background: #e8e8e8; display: flex; align-items: center; padding: 0 12px; gap: 6px; }
+  .desktop-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+  .desktop-body { padding: 32px; }
+
+  /* Common wireframe elements */
+  .wf-logo { font-size: 24px; font-weight: 800; text-align: center; padding: 12px 0; letter-spacing: -0.5px; }
+  .wf-logo span { color: #7c3aed; }
+  .wf-btn { display: block; width: 100%; padding: 14px; border: 2px solid #ccc; border-radius: 12px; text-align: center; font-weight: 600; font-size: 15px; background: #fafafa; margin: 6px 0; cursor: pointer; transition: all 0.15s; }
+  .wf-btn.primary { background: #111; color: #fff; border-color: #111; }
+  .wf-btn.accent { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+  .wf-btn:hover { transform: scale(0.98); }
+  .wf-input { width: 100%; padding: 12px 16px; border: 2px dashed #ccc; border-radius: 10px; font-size: 14px; color: #999; background: #fafafa; margin: 6px 0; }
+  .wf-divider { border: none; border-top: 1px dashed #ddd; margin: 16px 0; }
+  .wf-text { font-size: 13px; color: #888; text-align: center; line-height: 1.5; }
+  .wf-heading { font-size: 18px; font-weight: 700; margin: 12px 0 8px; }
+  .wf-subheading { font-size: 14px; color: #666; margin-bottom: 16px; }
+  .wf-placeholder { background: repeating-linear-gradient(45deg, #f0f0f0, #f0f0f0 10px, #e8e8e8 10px, #e8e8e8 20px); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 13px; font-weight: 600; }
+  .wf-tag { display: inline-block; padding: 6px 14px; border: 2px solid #ddd; border-radius: 20px; font-size: 12px; font-weight: 600; margin: 3px; cursor: pointer; }
+  .wf-tag.selected { background: #111; color: #fff; border-color: #111; }
+  .wf-annotation { position: relative; }
+  .wf-annotation::after { content: attr(data-note); position: absolute; right: -200px; top: 50%; transform: translateY(-50%); background: #fffde7; border: 1px solid #f0e68c; padding: 6px 10px; border-radius: 6px; font-size: 11px; color: #666; width: 180px; white-space: normal; }
+
+  /* Side-by-side layout */
+  .side-by-side { display: flex; gap: 40px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+
+  /* Rating slider */
+  .rating-row { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+  .rating-label { font-size: 13px; font-weight: 600; width: 90px; flex-shrink: 0; }
+  .rating-track { flex: 1; height: 8px; background: #e8e8e8; border-radius: 4px; position: relative; }
+  .rating-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+  .rating-value { font-size: 14px; font-weight: 700; width: 32px; text-align: right; }
+
+  /* Score card */
+  .score-card { background: #fafafa; border: 2px solid #e8e8e8; border-radius: 16px; padding: 20px; margin: 10px 0; }
+  .score-big { font-size: 48px; font-weight: 800; text-align: center; line-height: 1; }
+  .score-label { font-size: 12px; color: #888; text-align: center; margin-top: 4px; }
+  .score-bar-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+  .score-bar-label { font-size: 12px; width: 80px; color: #666; }
+  .score-bar { flex: 1; height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+  .score-bar-fill { height: 100%; border-radius: 3px; }
+
+  /* Waveform */
+  .waveform { display: flex; align-items: center; justify-content: center; gap: 2px; height: 60px; padding: 0 8px; }
+  .waveform-bar { width: 3px; background: #7c3aed; border-radius: 2px; opacity: 0.6; }
+
+  /* Tab bar */
+  .tab-bar { display: flex; border-bottom: 2px solid #e8e8e8; margin: 0 -16px; padding: 0 16px; }
+  .tab-item { flex: 1; text-align: center; padding: 10px 0; font-size: 12px; font-weight: 600; color: #aaa; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; }
+  .tab-item.active { color: #111; border-bottom-color: #7c3aed; }
+
+  /* Context cards */
+  .context-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+  .context-card { border: 2px solid #e0e0e0; border-radius: 14px; padding: 16px 12px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .context-card:hover { border-color: #7c3aed; }
+  .context-card.selected { border-color: #7c3aed; background: #f5f0ff; }
+  .context-icon { font-size: 28px; margin-bottom: 6px; }
+  .context-name { font-size: 13px; font-weight: 700; }
+  .context-desc { font-size: 10px; color: #999; margin-top: 2px; }
+
+  /* Flow arrow */
+  .flow-section { text-align: center; margin: 40px 0; }
+  .flow-arrow { font-size: 32px; color: #ccc; margin: 16px 0; }
+  .flow-label { font-size: 12px; color: #aaa; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Demographic bars */
+  .demo-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .demo-label { font-size: 11px; width: 50px; color: #888; text-align: right; }
+  .demo-bar { flex: 1; height: 20px; background: #f0f0f0; border-radius: 4px; overflow: hidden; display: flex; }
+  .demo-fill { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; }
+
+  /* Bottom nav */
+  .bottom-nav { display: flex; border-top: 2px solid #e8e8e8; margin: auto -16px -16px; padding: 10px 16px 20px; }
+  .bottom-nav-item { flex: 1; text-align: center; font-size: 10px; color: #aaa; font-weight: 600; }
+  .bottom-nav-item.active { color: #7c3aed; }
+  .bottom-nav-icon { font-size: 20px; margin-bottom: 2px; }
+
+  /* Comparison */
+  .compare-row { display: flex; gap: 12px; margin: 10px 0; }
+  .compare-track { flex: 1; border: 2px solid #e8e8e8; border-radius: 12px; padding: 12px; text-align: center; }
+  .compare-track.winner { border-color: #22c55e; background: #f0fdf4; }
+  .vs-badge { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #ccc; }
+
+  /* Insights */
+  .insight-card { border-left: 3px solid #7c3aed; background: #faf8ff; padding: 12px 14px; border-radius: 0 10px 10px 0; margin: 8px 0; }
+  .insight-card .insight-title { font-size: 12px; font-weight: 700; color: #7c3aed; margin-bottom: 4px; }
+  .insight-card .insight-body { font-size: 12px; color: #555; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="active" onclick="showScreen('landing')">1. Landing</button>
+  <button onclick="showScreen('upload')">2. Upload</button>
+  <button onclick="showScreen('context')">3. Context</button>
+  <button onclick="showScreen('rate')">4. Rate</button>
+  <button onclick="showScreen('results')">5. Results</button>
+  <button onclick="showScreen('compare')">6. A/B Test</button>
+</div>
+
+<!-- ==================== SCREEN 1: LANDING ==================== -->
+<div class="screen active" id="screen-landing">
+  <div class="screen-label">
+    <h2>Landing Page</h2>
+    <p>First impression — communicate value instantly</p>
+  </div>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-body">
+      <div class="wf-logo">Sound<span>Check</span> &#9835;</div>
+      <div style="text-align:center; margin: 8px 0 20px;">
+        <div style="font-size:22px; font-weight:800; line-height:1.2;">Will your track<br>go viral?</div>
+        <div style="font-size:13px; color:#888; margin-top:8px;">Real listeners rate your music.<br>Get scores. Know before you drop.</div>
+      </div>
+
+      <div class="wf-placeholder" style="height:180px; margin: 16px 0;">
+        <div style="text-align:center;">
+          <div style="font-size:40px;">&#127911;</div>
+          <div style="margin-top:8px;">Hero illustration / animation</div>
+        </div>
+      </div>
+
+      <button class="wf-btn accent" style="margin-top:16px; font-size:16px; padding:16px;">
+        &#10514; Upload Your Track
+      </button>
+      <button class="wf-btn" style="margin-top:4px;">
+        &#9654; Rate Music &amp; Earn Credits
+      </button>
+
+      <hr class="wf-divider">
+
+      <div style="font-size:13px; font-weight:700; text-align:center; margin-bottom:10px;">How It Works</div>
+      <div style="display:flex; gap:8px; text-align:center;">
+        <div style="flex:1; padding:10px; background:#fafafa; border-radius:10px;">
+          <div style="font-size:22px;">&#10514;</div>
+          <div style="font-size:11px; font-weight:600; margin-top:4px;">Upload<br>a snippet</div>
+        </div>
+        <div style="flex:1; padding:10px; background:#fafafa; border-radius:10px;">
+          <div style="font-size:22px;">&#128101;</div>
+          <div style="font-size:11px; font-weight:600; margin-top:4px;">Listeners<br>rate it</div>
+        </div>
+        <div style="flex:1; padding:10px; background:#fafafa; border-radius:10px;">
+          <div style="font-size:22px;">&#128200;</div>
+          <div style="font-size:11px; font-weight:600; margin-top:4px;">Get your<br>scores</div>
+        </div>
+      </div>
+
+      <hr class="wf-divider">
+
+      <div style="text-align:center; margin:8px 0;">
+        <div style="font-size:11px; color:#aaa; font-weight:600;">TRUSTED BY 12,000+ ARTISTS</div>
+        <div style="font-size:11px; color:#bbb; margin-top:4px;">&#9733;&#9733;&#9733;&#9733;&#9733; "Finally, honest feedback before I release"</div>
+      </div>
+
+      <div style="flex:1;"></div>
+      <div class="bottom-nav">
+        <div class="bottom-nav-item active"><div class="bottom-nav-icon">&#8962;</div>Home</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#10514;</div>Upload</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9654;</div>Rate</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#128200;</div>Results</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9881;</div>Profile</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 2: UPLOAD ==================== -->
+<div class="screen" id="screen-upload">
+  <div class="screen-label">
+    <h2>Upload Flow</h2>
+    <p>Drag & drop or select a 15-30s snippet</p>
+  </div>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-body">
+      <div class="wf-logo">Sound<span>Check</span> &#9835;</div>
+
+      <div class="wf-heading" style="text-align:center;">Upload Your Track</div>
+      <div class="wf-subheading" style="text-align:center;">15-30 second snippet works best</div>
+
+      <div class="wf-placeholder" style="height: 160px; margin: 12px 0; border: 2px dashed #ccc; background: #fafafa; flex-direction: column; display:flex; align-items:center; justify-content:center; border-radius:16px; cursor:pointer;">
+        <div style="font-size:36px; color:#bbb;">&#10514;</div>
+        <div style="font-size:13px; font-weight:600; color:#888; margin-top:8px;">Drag & drop audio file</div>
+        <div style="font-size:11px; color:#bbb; margin-top:4px;">MP3, WAV, M4A up to 10MB</div>
+      </div>
+
+      <div style="text-align:center; color:#bbb; font-size:12px; margin:8px 0;">— or —</div>
+
+      <button class="wf-btn">&#127897; Record a Snippet</button>
+      <button class="wf-btn">&#128279; Paste SoundCloud / Spotify Link</button>
+
+      <hr class="wf-divider">
+
+      <!-- After upload state -->
+      <div style="background:#f0fdf4; border:2px solid #bbf7d0; border-radius:12px; padding:14px; margin:8px 0;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="font-size:24px;">&#9989;</div>
+          <div>
+            <div style="font-size:13px; font-weight:700;">midnight_highway_v3.mp3</div>
+            <div style="font-size:11px; color:#888;">0:24 — 2.4MB</div>
+          </div>
+        </div>
+        <div class="waveform" style="margin-top:10px;">
+          <script>
+            // Generate waveform bars
+            document.addEventListener('DOMContentLoaded', () => {
+              document.querySelectorAll('.waveform').forEach(wf => {
+                for(let i = 0; i < 50; i++) {
+                  const bar = document.createElement('div');
+                  bar.className = 'waveform-bar';
+                  bar.style.height = (10 + Math.random() * 40) + 'px';
+                  wf.appendChild(bar);
+                }
+              });
+            });
+          </script>
+        </div>
+      </div>
+
+      <div class="wf-input" style="text-align:left;">&#128394; Track title (optional): "Midnight Highway"</div>
+      <div class="wf-input" style="text-align:left;">&#127925; Genre tags: <span class="wf-tag selected" style="font-size:10px; padding:3px 8px;">Pop</span><span class="wf-tag selected" style="font-size:10px; padding:3px 8px;">Electronic</span><span class="wf-tag" style="font-size:10px; padding:3px 8px;">+ Add</span></div>
+
+      <button class="wf-btn accent" style="margin-top:16px;">Choose Context &#8594;</button>
+
+      <div style="flex:1;"></div>
+      <div class="bottom-nav">
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#8962;</div>Home</div>
+        <div class="bottom-nav-item active"><div class="bottom-nav-icon">&#10514;</div>Upload</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9654;</div>Rate</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#128200;</div>Results</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9881;</div>Profile</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 3: CONTEXT SELECT ==================== -->
+<div class="screen" id="screen-context">
+  <div class="screen-label">
+    <h2>Context Selection</h2>
+    <p>Like Photofeeler's LinkedIn/Social/Dating — choose your platform</p>
+  </div>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-body">
+      <div class="wf-logo">Sound<span>Check</span> &#9835;</div>
+
+      <div class="wf-heading" style="text-align:center;">Where will this drop?</div>
+      <div class="wf-subheading" style="text-align:center;">We'll match you with the right listeners</div>
+
+      <div class="context-grid">
+        <div class="context-card selected">
+          <div class="context-icon">&#128248;</div>
+          <div class="context-name">TikTok / Reels</div>
+          <div class="context-desc">Short-form viral potential</div>
+        </div>
+        <div class="context-card">
+          <div class="context-icon">&#127925;</div>
+          <div class="context-name">Spotify Discover</div>
+          <div class="context-desc">Playlist & replay value</div>
+        </div>
+        <div class="context-card">
+          <div class="context-icon">&#128251;</div>
+          <div class="context-name">Radio / Mainstream</div>
+          <div class="context-desc">Mass appeal & polish</div>
+        </div>
+        <div class="context-card">
+          <div class="context-icon">&#127916;</div>
+          <div class="context-name">Sync / Licensing</div>
+          <div class="context-desc">Film, TV, brand fit</div>
+        </div>
+      </div>
+
+      <hr class="wf-divider">
+
+      <div style="font-size:13px; font-weight:700; margin-bottom:8px;">Rating dimensions for TikTok / Reels:</div>
+      <div style="background:#f5f0ff; border-radius:10px; padding:12px; font-size:12px; line-height:1.8;">
+        <div><strong>&#9889; Hook</strong> — Grabs attention in first 3 seconds</div>
+        <div><strong>&#128257; Stickiness</strong> — Gets stuck in your head</div>
+        <div><strong>&#128131; Moveability</strong> — Inspires dance/trend/meme</div>
+        <div><strong>&#10024; Uniqueness</strong> — Stands out from the feed</div>
+      </div>
+
+      <hr class="wf-divider">
+
+      <div style="font-size:13px; font-weight:700; margin-bottom:8px;">How many votes?</div>
+      <div style="display:flex; gap:8px;">
+        <div class="wf-tag">20 votes<br><span style="font-size:9px; color:#888;">Free</span></div>
+        <div class="wf-tag selected">50 votes<br><span style="font-size:9px; color:#888;">5 credits</span></div>
+        <div class="wf-tag">100 votes<br><span style="font-size:9px; color:#888;">12 credits</span></div>
+      </div>
+
+      <button class="wf-btn accent" style="margin-top:20px;">Submit for Rating &#9889;</button>
+      <div class="wf-text" style="margin-top:6px; font-size:11px;">Results typically ready in 2-4 hours</div>
+
+      <div style="flex:1;"></div>
+      <div class="bottom-nav">
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#8962;</div>Home</div>
+        <div class="bottom-nav-item active"><div class="bottom-nav-icon">&#10514;</div>Upload</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9654;</div>Rate</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#128200;</div>Results</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9881;</div>Profile</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 4: RATING INTERFACE ==================== -->
+<div class="screen" id="screen-rate">
+  <div class="screen-label">
+    <h2>Rating Interface</h2>
+    <p>What voters see — fast, swipeable, addictive</p>
+  </div>
+  <div class="side-by-side">
+    <!-- Rating Card -->
+    <div class="phone">
+      <div class="phone-notch"></div>
+      <div class="phone-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div class="wf-logo" style="font-size:18px; padding:0;">Sound<span>Check</span></div>
+          <div style="font-size:12px; background:#f5f0ff; padding:4px 10px; border-radius:12px; font-weight:600; color:#7c3aed;">+2 credits earned</div>
+        </div>
+
+        <div class="tab-bar" style="margin-bottom:16px;">
+          <div class="tab-item active">Rate</div>
+          <div class="tab-item">My Queue (3)</div>
+          <div class="tab-item">History</div>
+        </div>
+
+        <div style="text-align:center; margin:8px 0;">
+          <div style="font-size:11px; color:#aaa; font-weight:600; text-transform:uppercase; letter-spacing:1px;">TIKTOK / REELS CONTEXT</div>
+          <div style="font-size:12px; color:#bbb; margin-top:2px;">Track 4 of 10</div>
+        </div>
+
+        <!-- Player -->
+        <div style="background:#111; border-radius:16px; padding:20px; margin:12px 0; color:#fff; text-align:center;">
+          <div style="font-size:11px; color:#888; margin-bottom:8px;">&#127925; Pop / Electronic</div>
+          <div class="waveform" style="margin:12px 0;">
+          </div>
+          <div style="display:flex; justify-content:center; align-items:center; gap:20px; margin:12px 0;">
+            <div style="font-size:11px; color:#666;">0:00</div>
+            <div style="width:48px; height:48px; border-radius:50%; border:2px solid #fff; display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer;">&#9654;</div>
+            <div style="font-size:11px; color:#666;">0:24</div>
+          </div>
+          <div style="font-size:10px; color:#555;">&#128264; Listen at least once before rating</div>
+        </div>
+
+        <!-- Rating Sliders -->
+        <div style="margin:8px 0;">
+          <div class="rating-row">
+            <div class="rating-label">&#9889; Hook</div>
+            <div class="rating-track"><div class="rating-fill" style="width:70%;"></div></div>
+            <div class="rating-value">7</div>
+          </div>
+          <div class="rating-row">
+            <div class="rating-label">&#128257; Stickiness</div>
+            <div class="rating-track"><div class="rating-fill" style="width:85%;"></div></div>
+            <div class="rating-value">8.5</div>
+          </div>
+          <div class="rating-row">
+            <div class="rating-label">&#128131; Moveability</div>
+            <div class="rating-track"><div class="rating-fill" style="width:40%;"></div></div>
+            <div class="rating-value">4</div>
+          </div>
+          <div class="rating-row">
+            <div class="rating-label">&#10024; Uniqueness</div>
+            <div class="rating-track"><div class="rating-fill" style="width:60%;"></div></div>
+            <div class="rating-value">6</div>
+          </div>
+        </div>
+
+        <div class="wf-input" style="font-size:12px; height:50px;">&#128172; Optional: Quick feedback for the artist...</div>
+
+        <button class="wf-btn accent" style="margin-top:8px;">Submit & Next &#8594;</button>
+        <button class="wf-btn" style="font-size:12px; color:#aaa;">&#9873; Skip this track</button>
+
+        <div style="flex:1;"></div>
+        <div class="bottom-nav">
+          <div class="bottom-nav-item"><div class="bottom-nav-icon">&#8962;</div>Home</div>
+          <div class="bottom-nav-item"><div class="bottom-nav-icon">&#10514;</div>Upload</div>
+          <div class="bottom-nav-item active"><div class="bottom-nav-icon">&#9654;</div>Rate</div>
+          <div class="bottom-nav-item"><div class="bottom-nav-icon">&#128200;</div>Results</div>
+          <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9881;</div>Profile</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 5: RESULTS DASHBOARD ==================== -->
+<div class="screen" id="screen-results">
+  <div class="screen-label">
+    <h2>Results Dashboard</h2>
+    <p>The payoff — actionable scores + AI insights</p>
+  </div>
+  <div class="side-by-side">
+    <!-- Mobile Results -->
+    <div class="phone">
+      <div class="phone-notch"></div>
+      <div class="phone-body" style="gap:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:14px; font-weight:700;">&#8592; Results</div>
+          <div style="font-size:12px; color:#888;">48/50 votes in</div>
+        </div>
+
+        <div style="text-align:center; margin:6px 0;">
+          <div style="font-size:14px; font-weight:700;">Midnight Highway</div>
+          <div style="font-size:11px; color:#aaa;">TikTok / Reels Context</div>
+        </div>
+
+        <!-- Overall Score -->
+        <div class="score-card" style="background:linear-gradient(135deg, #f5f0ff, #fff); padding:16px;">
+          <div class="score-big" style="color:#7c3aed;">8.2</div>
+          <div class="score-label">OVERALL VIRALITY SCORE</div>
+          <div style="text-align:center; margin-top:6px;">
+            <span style="background:#22c55e; color:#fff; font-size:10px; padding:3px 10px; border-radius:10px; font-weight:700;">TOP 15% of tracks tested</span>
+          </div>
+        </div>
+
+        <!-- Dimension Breakdown -->
+        <div style="font-size:13px; font-weight:700; margin-top:8px;">Dimension Breakdown</div>
+        <div class="score-bar-row">
+          <div class="score-bar-label">&#9889; Hook</div>
+          <div class="score-bar"><div class="score-bar-fill" style="width:91%; background:#22c55e;"></div></div>
+          <div style="font-size:13px; font-weight:700;">9.1</div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-label">&#128257; Stickiness</div>
+          <div class="score-bar"><div class="score-bar-fill" style="width:84%; background:#22c55e;"></div></div>
+          <div style="font-size:13px; font-weight:700;">8.4</div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-label">&#128131; Moveable</div>
+          <div class="score-bar"><div class="score-bar-fill" style="width:72%; background:#eab308;"></div></div>
+          <div style="font-size:13px; font-weight:700;">7.2</div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-label">&#10024; Unique</div>
+          <div class="score-bar"><div class="score-bar-fill" style="width:78%; background:#22c55e;"></div></div>
+          <div style="font-size:13px; font-weight:700;">7.8</div>
+        </div>
+
+        <!-- AI Insights -->
+        <div style="font-size:13px; font-weight:700; margin-top:12px;">&#129302; AI Insights</div>
+        <div class="insight-card">
+          <div class="insight-title">&#127919; TARGET AUDIENCE</div>
+          <div class="insight-body">Hook scored 9.1 with 18-24 demo (vs 7.8 overall). Consider targeting younger audiences on Reels.</div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-title">&#128200; SIMILAR TRACKS</div>
+          <div class="insight-body">Tracks with this audio profile + stickiness score had 3.2x higher save rate on Spotify.</div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-title">&#128161; SUGGESTION</div>
+          <div class="insight-body">Moveability at 7.2 is your weakest dimension. Try starting the snippet 2s earlier where the rhythm kicks in.</div>
+        </div>
+
+        <!-- Demographics -->
+        <div style="font-size:13px; font-weight:700; margin-top:12px;">Score by Age</div>
+        <div class="demo-row">
+          <div class="demo-label">13-17</div>
+          <div class="demo-bar"><div class="demo-fill" style="width:88%; background:#7c3aed;">8.8</div></div>
+        </div>
+        <div class="demo-row">
+          <div class="demo-label">18-24</div>
+          <div class="demo-bar"><div class="demo-fill" style="width:91%; background:#7c3aed;">9.1</div></div>
+        </div>
+        <div class="demo-row">
+          <div class="demo-label">25-34</div>
+          <div class="demo-bar"><div class="demo-fill" style="width:76%; background:#a78bfa;">7.6</div></div>
+        </div>
+        <div class="demo-row">
+          <div class="demo-label">35+</div>
+          <div class="demo-bar"><div class="demo-fill" style="width:62%; background:#c4b5fd;">6.2</div></div>
+        </div>
+
+        <button class="wf-btn" style="margin-top:12px;">&#128190; Download Full Report</button>
+        <button class="wf-btn accent">&#9878; A/B Test Another Mix</button>
+
+        <div style="flex:1;"></div>
+        <div class="bottom-nav">
+          <div class="bottom-nav-item"><div class="bottom-nav-icon">&#8962;</div>Home</div>
+          <div class="bottom-nav-item"><div class="bottom-nav-icon">&#10514;</div>Upload</div>
+          <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9654;</div>Rate</div>
+          <div class="bottom-nav-item active"><div class="bottom-nav-icon">&#128200;</div>Results</div>
+          <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9881;</div>Profile</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SCREEN 6: A/B COMPARE ==================== -->
+<div class="screen" id="screen-compare">
+  <div class="screen-label">
+    <h2>A/B Test View</h2>
+    <p>Compare two mixes side by side — a killer Pro feature</p>
+  </div>
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-body">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:14px; font-weight:700;">&#8592; A/B Comparison</div>
+        <div style="font-size:10px; background:#f5f0ff; color:#7c3aed; padding:3px 8px; border-radius:8px; font-weight:600;">PRO</div>
+      </div>
+
+      <div style="text-align:center; margin:12px 0 8px;">
+        <div style="font-size:15px; font-weight:700;">Midnight Highway</div>
+        <div style="font-size:11px; color:#888;">TikTok / Reels — 50 votes each</div>
+      </div>
+
+      <!-- Comparison header -->
+      <div style="display:flex; gap:8px; margin:8px 0; text-align:center;">
+        <div style="flex:1; background:#f0fdf4; border-radius:10px; padding:10px;">
+          <div style="font-size:10px; color:#888; font-weight:600;">VERSION A</div>
+          <div style="font-size:11px; font-weight:700; margin-top:2px;">Original Mix</div>
+          <div style="font-size:28px; font-weight:800; color:#22c55e; margin-top:4px;">8.2</div>
+          <div style="font-size:10px; color:#22c55e; font-weight:700;">&#9650; WINNER</div>
+        </div>
+        <div style="display:flex; align-items:center; font-size:12px; font-weight:800; color:#ccc;">VS</div>
+        <div style="flex:1; background:#fafafa; border-radius:10px; padding:10px;">
+          <div style="font-size:10px; color:#888; font-weight:600;">VERSION B</div>
+          <div style="font-size:11px; font-weight:700; margin-top:2px;">Alt Intro Mix</div>
+          <div style="font-size:28px; font-weight:800; color:#666; margin-top:4px;">7.4</div>
+        </div>
+      </div>
+
+      <!-- Dimension comparison -->
+      <div style="font-size:12px; font-weight:700; margin:12px 0 6px;">Head-to-Head</div>
+
+      <div style="margin:4px 0;">
+        <div style="font-size:11px; font-weight:600; margin-bottom:4px;">&#9889; Hook</div>
+        <div style="display:flex; gap:4px; height:20px;">
+          <div style="flex:91; background:#22c55e; border-radius:4px 0 0 4px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:700;">A: 9.1</div>
+          <div style="flex:68; background:#e8e8e8; border-radius:0 4px 4px 0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#888; font-weight:700;">B: 6.8</div>
+        </div>
+      </div>
+      <div style="margin:4px 0;">
+        <div style="font-size:11px; font-weight:600; margin-bottom:4px;">&#128257; Stickiness</div>
+        <div style="display:flex; gap:4px; height:20px;">
+          <div style="flex:84; background:#22c55e; border-radius:4px 0 0 4px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:700;">A: 8.4</div>
+          <div style="flex:82; background:#e8e8e8; border-radius:0 4px 4px 0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#888; font-weight:700;">B: 8.2</div>
+        </div>
+      </div>
+      <div style="margin:4px 0;">
+        <div style="font-size:11px; font-weight:600; margin-bottom:4px;">&#128131; Moveability</div>
+        <div style="display:flex; gap:4px; height:20px;">
+          <div style="flex:72; background:#e8e8e8; border-radius:4px 0 0 4px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#888; font-weight:700;">A: 7.2</div>
+          <div style="flex:79; background:#3b82f6; border-radius:0 4px 4px 0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:700;">B: 7.9</div>
+        </div>
+      </div>
+      <div style="margin:4px 0;">
+        <div style="font-size:11px; font-weight:600; margin-bottom:4px;">&#10024; Uniqueness</div>
+        <div style="display:flex; gap:4px; height:20px;">
+          <div style="flex:78; background:#22c55e; border-radius:4px 0 0 4px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff; font-weight:700;">A: 7.8</div>
+          <div style="flex:71; background:#e8e8e8; border-radius:0 4px 4px 0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#888; font-weight:700;">B: 7.1</div>
+        </div>
+      </div>
+
+      <hr class="wf-divider">
+
+      <!-- AI Insight -->
+      <div class="insight-card">
+        <div class="insight-title">&#129302; AI ANALYSIS</div>
+        <div class="insight-body">Version A's intro hook is significantly stronger (+2.3 pts). Version B's alt intro hurt first-impression impact but slightly improved moveability. <strong>Recommendation: Go with A</strong>, but consider B's rhythmic elements for a future remix.</div>
+      </div>
+
+      <!-- Voter comments -->
+      <div style="font-size:12px; font-weight:700; margin:8px 0 4px;">&#128172; Voter Highlights</div>
+      <div style="background:#fafafa; border-radius:10px; padding:10px; margin:4px 0;">
+        <div style="font-size:11px; line-height:1.5;">
+          <div style="margin:4px 0;"><span style="color:#22c55e; font-weight:700;">A:</span> "That synth hit at 0:02 is insane, instant replay"</div>
+          <div style="margin:4px 0;"><span style="color:#22c55e; font-weight:700;">A:</span> "Would def use this in a transition video"</div>
+          <div style="margin:4px 0;"><span style="color:#3b82f6; font-weight:700;">B:</span> "The groove is better but took too long to hit"</div>
+        </div>
+      </div>
+
+      <button class="wf-btn accent" style="margin-top:12px;">&#128190; Export Comparison Report</button>
+
+      <div style="flex:1;"></div>
+      <div class="bottom-nav">
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#8962;</div>Home</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#10514;</div>Upload</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9654;</div>Rate</div>
+        <div class="bottom-nav-item active"><div class="bottom-nav-icon">&#128200;</div>Results</div>
+        <div class="bottom-nav-item"><div class="bottom-nav-icon">&#9881;</div>Profile</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

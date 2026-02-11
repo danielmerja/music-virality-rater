@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Neon Local
+.neon_local/
+
+# Claude
+.claude
+
+# Windows artifacts
+nul

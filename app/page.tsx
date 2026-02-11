@@ -1,18 +1,21 @@
+"use client"
+
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth-provider";
 
 export default function LandingPage() {
+  const { openAuthModal } = useAuth();
+
   return (
     <div className="flex min-h-screen flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4">
         <Logo />
-        <Link href="/login">
-          <Button variant="outline" size="sm">
-            Sign In
-          </Button>
-        </Link>
+        <Button variant="outline" size="sm" onClick={openAuthModal}>
+          Sign In
+        </Button>
       </header>
 
       {/* Hero */}

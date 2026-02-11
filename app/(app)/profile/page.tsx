@@ -13,7 +13,7 @@ export default async function ProfilePage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
+  if (!session) redirect("/");
 
   const { page: pageStr } = await searchParams;
   const parsed = parseInt(pageStr || "1", 10);
@@ -23,7 +23,7 @@ export default async function ProfilePage({
   const profile = await getProfile(session.user.id);
   const trackData = await getTracksByUser(session.user.id, page);
 
-  if (!profile) redirect("/login");
+  if (!profile) redirect("/");
 
   const initials = (session.user.name || "U")
     .split(" ")
@@ -76,7 +76,7 @@ export default async function ProfilePage({
       <div className="mb-6">
         <h2 className="mb-3 font-semibold">My Tracks</h2>
         <ProfileTracks
-          tracks={trackData.tracks.map((t) => ({
+          tracks={trackData.tracks.map((t: (typeof trackData.tracks)[number]) => ({
             id: t.id,
             title: t.title,
             contextId: t.contextId,

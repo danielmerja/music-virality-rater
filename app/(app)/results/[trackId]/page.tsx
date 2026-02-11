@@ -14,7 +14,7 @@ export default async function ResultsPage({
   const { trackId } = await params;
 
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
+  if (!session) redirect("/");
 
   const track = await getTrackById(trackId);
   if (!track || track.isDeleted || track.userId !== session.user.id) {

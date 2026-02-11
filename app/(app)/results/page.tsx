@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default async function ResultsListPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
+  if (!session) redirect("/");
 
   const { tracks } = await getTracksByUser(session.user.id, 1, 50);
 

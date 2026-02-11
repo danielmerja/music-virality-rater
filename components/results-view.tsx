@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScoreBar } from "@/components/score-bar";
 import { InsightCard } from "@/components/insight-card";
+import { formatPercentile } from "@/lib/utils";
 import type { Dimension } from "@/lib/constants/contexts";
 
 interface ResultsViewProps {
@@ -81,9 +82,7 @@ export function ResultsView({
           <p className="mt-1 text-5xl font-bold text-primary">{score.toFixed(1)}</p>
           {track.percentile !== null ? (
             <p className="mt-2 text-sm font-medium">
-              {track.percentile >= 50
-                ? `Top ${100 - track.percentile}% of tracks tested`
-                : `Better than ${track.percentile}% of tracks tested`}
+              {formatPercentile(track.percentile)}
             </p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">

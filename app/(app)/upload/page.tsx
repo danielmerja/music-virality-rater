@@ -262,6 +262,7 @@ export default function UploadPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter track title"
+              maxLength={200}
             />
           </div>
 

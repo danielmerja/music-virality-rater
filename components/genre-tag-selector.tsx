@@ -96,6 +96,7 @@ export function GenreTagSelector({
             onChange={(e) => setCustomInput(e.target.value)}
             placeholder="Custom genre..."
             className="h-8 text-sm"
+            maxLength={50}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustom())}
           />
           <Button type="button" size="sm" variant="outline" onClick={addCustom}>

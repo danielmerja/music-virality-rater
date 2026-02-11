@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { deleteTrack } from "@/lib/actions/track";
+import { formatPercentile } from "@/lib/utils";
 
 interface TrackCardProps {
   track: {
@@ -58,7 +59,7 @@ export function TrackCard({ track, onDeleted }: TrackCardProps) {
           )}
           {track.percentile !== null && (
             <span className="text-xs text-muted-foreground">
-              Top {100 - track.percentile}%
+              {formatPercentile(track.percentile)}
             </span>
           )}
         </div>

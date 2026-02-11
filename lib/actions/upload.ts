@@ -26,17 +26,41 @@ export async function createTrack(data: {
 
   // --- Validate inputs ---
 
-  // 1. Regex check: filename must match the format produced by /api/upload
+  // 1. Title: must be a non-empty string with a reasonable length limit
+  if (typeof data.title !== "string" || !data.title.trim()) {
+    throw new Error("Title is required");
+  }
+  if (data.title.trim().length > 200) {
+    throw new Error("Title must be 200 characters or fewer");
+  }
+
+  // 2. Genre tags: at most 5 tags, each a non-empty string of at most 50 chars
+  if (!Array.isArray(data.genreTags)) {
+    throw new Error("Genre tags must be an array");
+  }
+  if (data.genreTags.length > 5) {
+    throw new Error("You can select up to 5 genre tags");
+  }
+  for (const tag of data.genreTags) {
+    if (typeof tag !== "string" || !tag.trim()) {
+      throw new Error("Each genre tag must be a non-empty string");
+    }
+    if (tag.trim().length > 50) {
+      throw new Error("Each genre tag must be 50 characters or fewer");
+    }
+  }
+
+  // 3. Regex check: filename must match the format produced by /api/upload
   if (!AUDIO_FILENAME_PATTERN.test(data.audioFilename)) {
     throw new Error("Invalid audio filename format");
   }
 
-  // 2. Validate duration is a positive finite number
+  // 4. Validate duration is a positive finite number
   if (!Number.isFinite(data.duration) || data.duration <= 0) {
     throw new Error("Invalid duration");
   }
 
-  // 3. Validate snippet bounds are within the track and form a valid range
+  // 5. Validate snippet bounds are within the track and form a valid range
   const { snippetStart, snippetEnd, duration } = data;
   if (
     !Number.isFinite(snippetStart) ||

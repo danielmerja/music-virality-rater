@@ -96,52 +96,48 @@ export async function createTrack(data: {
 
   const shareToken = randomBytes(8).toString("hex");
 
-  // Wrap ownership check, track insert, consumed flag, and counter update in a
-  // transaction so concurrent calls with the same filename can't both succeed.
-  const track = await db.transaction(async (tx) => {
-    // 2. Atomically claim the upload: UPDATE ... WHERE consumed = false ensures
-    //    only one concurrent caller can succeed (the other matches 0 rows).
-    const [claimed] = await tx
-      .update(uploads)
-      .set({ consumed: true })
-      .where(
-        and(
-          eq(uploads.filename, data.audioFilename),
-          eq(uploads.userId, userId),
-          eq(uploads.consumed, false),
-        )
+  // Atomically claim the upload: UPDATE ... WHERE consumed = false ensures
+  // only one concurrent caller can succeed (the other matches 0 rows).
+  // This is safe without a transaction because the atomic UPDATE acts as
+  // a lock — only the first caller will match and claim the row.
+  const [claimed] = await db
+    .update(uploads)
+    .set({ consumed: true })
+    .where(
+      and(
+        eq(uploads.filename, data.audioFilename),
+        eq(uploads.userId, userId),
+        eq(uploads.consumed, false),
       )
-      .returning({ id: uploads.id });
+    )
+    .returning({ id: uploads.id });
 
-    if (!claimed) {
-      throw new Error(
-        "Audio file not found. Please upload the file before creating a track.",
-      );
-    }
+  if (!claimed) {
+    throw new Error(
+      "Audio file not found. Please upload the file before creating a track.",
+    );
+  }
 
-    const [newTrack] = await tx
-      .insert(tracks)
-      .values({
-        userId,
-        title: data.title,
-        audioFilename: data.audioFilename,
-        duration: data.duration,
-        genreTags: data.genreTags,
-        snippetStart: data.snippetStart,
-        snippetEnd: data.snippetEnd,
-        shareToken,
-        status: "draft",
-      })
-      .returning();
+  const [track] = await db
+    .insert(tracks)
+    .values({
+      userId,
+      title: data.title,
+      audioFilename: data.audioFilename,
+      duration: data.duration,
+      genreTags: data.genreTags,
+      snippetStart: data.snippetStart,
+      snippetEnd: data.snippetEnd,
+      shareToken,
+      status: "draft",
+    })
+    .returning();
 
-    // Increment tracks_uploaded
-    await tx
-      .update(profiles)
-      .set({ tracksUploaded: sql`${profiles.tracksUploaded} + 1` })
-      .where(eq(profiles.id, userId));
-
-    return newTrack;
-  });
+  // Increment tracks_uploaded
+  await db
+    .update(profiles)
+    .set({ tracksUploaded: sql`${profiles.tracksUploaded} + 1` })
+    .where(eq(profiles.id, userId));
 
   return track;
 }

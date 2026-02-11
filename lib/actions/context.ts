@@ -42,54 +42,52 @@ export async function submitForRating(data: {
   const { votes: votesRequested, credits: creditsCost } = votePackage;
   const userId = session.user.id;
 
-  await db.transaction(async (tx) => {
-    // Atomically deduct credits if cost > 0
-    if (creditsCost > 0) {
-      // WHERE credits >= cost acts as an atomic guard against double-spend:
-      // if a concurrent request already deducted, this UPDATE matches 0 rows.
-      const [updated] = await tx
-        .update(profiles)
-        .set({ credits: sql`${profiles.credits} - ${creditsCost}` })
-        .where(
-          and(eq(profiles.id, userId), gte(profiles.credits, creditsCost))
-        )
-        .returning({ id: profiles.id });
-
-      if (!updated) {
-        throw new Error("Insufficient credits");
-      }
-
-      // Record transaction
-      await tx.insert(creditTransactions).values({
-        userId,
-        amount: -creditsCost,
-        type: "track_submit",
-        referenceId: data.trackId,
-      });
-    }
-
-    // Update track (only if owned by the authenticated user AND still a draft)
-    const [updatedTrack] = await tx
-      .update(tracks)
-      .set({
-        contextId: data.contextId,
-        votesRequested,
-        status: "collecting",
-      })
+  // Atomically deduct credits if cost > 0.
+  // WHERE credits >= cost acts as an atomic guard against double-spend:
+  // if a concurrent request already deducted, this UPDATE matches 0 rows.
+  if (creditsCost > 0) {
+    const [updated] = await db
+      .update(profiles)
+      .set({ credits: sql`${profiles.credits} - ${creditsCost}` })
       .where(
-        and(
-          eq(tracks.id, data.trackId),
-          eq(tracks.userId, userId),
-          eq(tracks.status, "draft"),
-          eq(tracks.isDeleted, false),
-        )
+        and(eq(profiles.id, userId), gte(profiles.credits, creditsCost))
       )
-      .returning({ id: tracks.id });
+      .returning({ id: profiles.id });
 
-    if (!updatedTrack) {
-      throw new Error("Track not found or already submitted");
+    if (!updated) {
+      throw new Error("Insufficient credits");
     }
-  });
+
+    // Record transaction
+    await db.insert(creditTransactions).values({
+      userId,
+      amount: -creditsCost,
+      type: "track_submit",
+      referenceId: data.trackId,
+    });
+  }
+
+  // Update track (only if owned by the authenticated user AND still a draft)
+  const [updatedTrack] = await db
+    .update(tracks)
+    .set({
+      contextId: data.contextId,
+      votesRequested,
+      status: "collecting",
+    })
+    .where(
+      and(
+        eq(tracks.id, data.trackId),
+        eq(tracks.userId, userId),
+        eq(tracks.status, "draft"),
+        eq(tracks.isDeleted, false),
+      )
+    )
+    .returning({ id: tracks.id });
+
+  if (!updatedTrack) {
+    throw new Error("Track not found or already submitted");
+  }
 
   return { success: true };
 }

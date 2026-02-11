@@ -33,19 +33,24 @@ export default function RatePage() {
 
   const fetchTrack = useCallback(async () => {
     setLoading(true);
-    setHasListened(false);
-    setRatings([5, 5, 5, 5]);
-    setFeedback("");
 
     try {
       const res = await fetch("/api/rate/next");
       if (res.status === 404) {
         setNoTracks(true);
         setTrack(null);
+        setHasListened(false);
+        setRatings([5, 5, 5, 5]);
+        setFeedback("");
       } else if (!res.ok) {
         throw new Error("Failed to load track");
       } else {
         const data = await res.json();
+        // Reset form state only after a successful fetch so a network
+        // error doesn't wipe the user's in-progress ratings.
+        setHasListened(false);
+        setRatings([5, 5, 5, 5]);
+        setFeedback("");
         setTrack(data.track);
         setRatingProgress(data.ratingProgress ?? 0);
         setNoTracks(false);

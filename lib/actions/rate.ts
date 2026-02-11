@@ -249,8 +249,14 @@ async function computeTrackScores(trackId: string) {
       if (scores.length >= 2) {
         // Only compute percentile when there are at least 2 tracks to
         // compare against — a single track has no meaningful ranking.
+        //
+        // Uses PERCENT_RANK semantics: (count of scores strictly below) / (N - 1).
+        // This yields 0 for the lowest-scoring track and 100 for the highest,
+        // matching the intuitive meaning of "percentile" and avoiding the
+        // confusing edge where the worst track would otherwise show a non-zero
+        // percentile (which the display would render as an impressive "TOP" rank).
         const below = scores.filter((s) => s < overall).length;
-        percentile = Math.round((below / scores.length) * 100);
+        percentile = Math.round((below / (scores.length - 1)) * 100);
       }
     }
 

@@ -42,6 +42,16 @@ export async function generateUniqueHandle(
     candidate = `${base}${suffix}`;
   }
 
-  // Extremely unlikely: 10 collisions in a row. Fall back to user-id prefix.
-  return `${base}${userId.slice(0, 6)}`;
+  // Extremely unlikely: 10 collisions in a row.
+  // Use a longer userId slice + random suffix and verify uniqueness.
+  const fallback = `${base}${userId.slice(0, 8)}${Math.floor(Math.random() * 900 + 100)}`;
+  const existingFallback = await db.query.profiles.findFirst({
+    where: eq(profiles.handle, fallback),
+    columns: { id: true },
+  });
+
+  if (!existingFallback) return fallback;
+
+  // Final resort: full userId ensures practical uniqueness (still enforced by DB UNIQUE constraint)
+  return `${base}${userId.replace(/-/g, "").slice(0, 12)}`;
 }

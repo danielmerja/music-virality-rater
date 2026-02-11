@@ -81,7 +81,9 @@ export function ResultsView({
           <p className="mt-1 text-5xl font-bold text-primary">{score.toFixed(1)}</p>
           {track.percentile !== null ? (
             <p className="mt-2 text-sm font-medium">
-              TOP {100 - track.percentile}% of tracks tested
+              {track.percentile >= 50
+                ? `Top ${100 - track.percentile}% of tracks tested`
+                : `Better than ${track.percentile}% of tracks tested`}
             </p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">

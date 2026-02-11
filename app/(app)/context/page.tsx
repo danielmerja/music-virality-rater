@@ -22,15 +22,19 @@ export default function ContextPage() {
 
   const [userCredits, setUserCredits] = useState<number | null>(null);
   const [ratingProgress, setRatingProgress] = useState(0);
+  const [profileError, setProfileError] = useState(false);
 
   useEffect(() => {
     getUserProfileData()
       .then(({ credits, ratingProgress }) => {
         setUserCredits(credits);
         setRatingProgress(ratingProgress);
+        setProfileError(false);
       })
       .catch(() => {
-        setUserCredits(0);
+        // Keep userCredits as null so the submit button stays disabled
+        // (the disabled check includes userCredits === null).
+        setProfileError(true);
       });
   }, []);
 
@@ -119,6 +123,13 @@ export default function ContextPage() {
           Earn votes by rating other artists&apos; tracks
         </p>
       </div>
+
+      {/* Profile error */}
+      {profileError && (
+        <p className="mb-4 text-center text-sm text-destructive">
+          Could not load your profile. Please refresh the page or sign in again.
+        </p>
+      )}
 
       {/* Submit */}
       <Button

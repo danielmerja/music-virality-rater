@@ -11,7 +11,7 @@ import {
 
 export const profiles = pgTable("profiles", {
   id: text("id").primaryKey(), // FK to better-auth user id
-  handle: text("handle"),
+  handle: text("handle").unique(),
   credits: integer("credits").notNull().default(20),
   tracksUploaded: integer("tracks_uploaded").notNull().default(0),
   tracksRated: integer("tracks_rated").notNull().default(0),

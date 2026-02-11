@@ -16,6 +16,12 @@ export async function deleteTrack(trackId: string) {
 
   if (!track) throw new Error("Track not found");
 
+  if (track.status === "collecting") {
+    throw new Error(
+      "Cannot delete a track that is currently collecting ratings. Wait for collection to complete."
+    );
+  }
+
   await db
     .update(tracks)
     .set({ isDeleted: true })

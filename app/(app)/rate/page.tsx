@@ -9,6 +9,7 @@ import { AudioPlayer } from "@/components/audio-player";
 import { RatingSliderCard } from "@/components/rating-slider-card";
 import { EarnProgressBar } from "@/components/earn-progress-bar";
 import { getContextById, type Dimension } from "@/lib/constants/contexts";
+import { submitRating } from "@/lib/actions/rate";
 
 interface TrackToRate {
   id: string;
@@ -69,22 +70,15 @@ export default function RatePage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/rate/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          trackId: track.id,
-          dimension1: ratings[0],
-          dimension2: ratings[1],
-          dimension3: ratings[2],
-          dimension4: ratings[3],
-          feedback: feedback.trim() || undefined,
-        }),
+      const result = await submitRating({
+        trackId: track.id,
+        dimension1: ratings[0],
+        dimension2: ratings[1],
+        dimension3: ratings[2],
+        dimension4: ratings[3],
+        feedback: feedback.trim() || undefined,
       });
 
-      if (!res.ok) throw new Error("Failed to submit");
-
-      const result = await res.json();
       if (result.creditEarned) {
         toast.success("You earned +1 credit!");
       } else {
@@ -92,8 +86,10 @@ export default function RatePage() {
       }
       setRatingProgress(result.newProgress);
       fetchTrack();
-    } catch {
-      toast.error("Failed to submit rating");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to submit rating"
+      );
     } finally {
       setSubmitting(false);
     }

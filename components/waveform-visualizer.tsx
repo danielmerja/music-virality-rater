@@ -29,12 +29,15 @@ export function WaveformVisualizer({
   useEffect(() => {
     if (!audioUrl) return;
 
+    const abortController = new AbortController();
     const audioContext = new AudioContext();
 
-    fetch(audioUrl)
+    fetch(audioUrl, { signal: abortController.signal })
       .then((res) => res.arrayBuffer())
       .then((buffer) => audioContext.decodeAudioData(buffer))
       .then((audioBuffer) => {
+        if (abortController.signal.aborted) return;
+
         const channelData = audioBuffer.getChannelData(0);
         const samplesPerBar = Math.floor(channelData.length / bars);
         const barData: number[] = [];
@@ -51,7 +54,9 @@ export function WaveformVisualizer({
         const max = Math.max(...barData, 0.01);
         setWaveformData(barData.map((v) => v / max));
       })
-      .catch(() => {
+      .catch((err) => {
+        // Ignore abort errors — they're expected during cleanup
+        if (err instanceof DOMException && err.name === "AbortError") return;
         // Fallback: generate pseudo-random bars
         setWaveformData(
           Array.from({ length: bars }, () => 0.2 + Math.random() * 0.8)
@@ -59,6 +64,7 @@ export function WaveformVisualizer({
       });
 
     return () => {
+      abortController.abort();
       audioContext.close();
     };
   }, [audioUrl, bars]);

@@ -81,6 +81,7 @@ export async function submitForRating(data: {
           eq(tracks.id, data.trackId),
           eq(tracks.userId, userId),
           eq(tracks.status, "draft"),
+          eq(tracks.isDeleted, false),
         )
       )
       .returning({ id: tracks.id });

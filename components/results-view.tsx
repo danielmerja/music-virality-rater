@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
+
+const emptySubscribe = () => () => {};
+const getOrigin = () => window.location.origin;
+const getServerOrigin = () => "";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScoreBar } from "@/components/score-bar";
@@ -35,8 +39,9 @@ export function ResultsView({
   onDelete,
 }: ResultsViewProps) {
   const [copied, setCopied] = useState(false);
+  const origin = useSyncExternalStore(emptySubscribe, getOrigin, getServerOrigin);
 
-  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/r/${track.shareToken}`;
+  const shareUrl = `${origin}/r/${track.shareToken}`;
 
   const copyLink = async () => {
     await navigator.clipboard.writeText(shareUrl);

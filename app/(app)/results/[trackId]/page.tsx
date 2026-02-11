@@ -17,7 +17,7 @@ export default async function ResultsPage({
   if (!session) redirect("/login");
 
   const track = await getTrackById(trackId);
-  if (!track || track.isDeleted) {
+  if (!track || track.isDeleted || track.userId !== session.user.id) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <p className="text-muted-foreground">Track not found.</p>

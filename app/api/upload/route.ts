@@ -6,8 +6,11 @@ import { join, resolve, sep } from "path";
 import { db } from "@/lib/db";
 import { uploads } from "@/lib/db/schema";
 import { ensureProfile } from "@/lib/queries/profiles";
+import { and, eq, gte } from "drizzle-orm";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_UPLOADS_PER_HOUR = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const ALLOWED_TYPES = ["audio/mpeg", "audio/wav", "audio/x-m4a", "audio/mp4", "audio/m4a"];
 const ALLOWED_EXTENSIONS = ["mp3", "wav", "m4a"] as const;
 
@@ -15,6 +18,23 @@ export async function POST(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit: reject early before processing the file body
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS);
+  const recentCount = await db.$count(
+    uploads,
+    and(
+      eq(uploads.userId, session.user.id),
+      gte(uploads.createdAt, windowStart),
+    ),
+  );
+
+  if (recentCount >= MAX_UPLOADS_PER_HOUR) {
+    return NextResponse.json(
+      { error: "Upload limit reached. Please try again later." },
+      { status: 429 },
+    );
   }
 
   const formData = await request.formData();

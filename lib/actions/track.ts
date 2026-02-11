@@ -5,6 +5,8 @@ import { tracks } from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq, and, ne } from "drizzle-orm";
+import { unlink } from "fs/promises";
+import { join } from "path";
 
 export async function deleteTrack(trackId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -42,6 +44,15 @@ export async function deleteTrack(trackId: string) {
     throw new Error(
       "Cannot delete a track that is currently collecting ratings. Wait for collection to complete."
     );
+  }
+
+  // Remove the audio file from disk so it is no longer publicly accessible.
+  // This is best-effort — if the file is already gone we silently ignore.
+  try {
+    const filepath = join(process.cwd(), "public", "uploads", track.audioFilename);
+    await unlink(filepath);
+  } catch {
+    // File may have already been removed; ignore
   }
 
   return { success: true };

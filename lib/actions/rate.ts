@@ -217,7 +217,8 @@ async function computeTrackScores(trackId: string) {
       const allCompleted = await tx.query.tracks.findMany({
         where: and(
           eq(tracks.status, "complete"),
-          eq(tracks.contextId, track.contextId)
+          eq(tracks.contextId, track.contextId),
+          eq(tracks.isDeleted, false),
         ),
         columns: { overallScore: true },
       });

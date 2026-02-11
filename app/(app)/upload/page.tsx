@@ -127,7 +127,7 @@ export default function UploadPage() {
   const snippetDuration = snippetEnd - snippetStart;
   const isSnippetValid = snippetDuration >= 15 && snippetDuration <= 30;
   const canSubmit =
-    uploadedFilename && title.trim() && tosAccepted && isSnippetValid && !uploading;
+    uploadedFilename && title.trim() && tosAccepted && isSnippetValid && !uploading && duration > 0;
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">

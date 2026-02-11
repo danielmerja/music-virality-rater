@@ -8,6 +8,7 @@ import { ContextCard } from "@/components/context-card";
 import { VotePackageSelector } from "@/components/vote-package-selector";
 import { EarnProgressBar } from "@/components/earn-progress-bar";
 import { CONTEXTS, type Context } from "@/lib/constants/contexts";
+import { VOTE_PACKAGES } from "@/lib/constants/packages";
 import { submitForRating, getUserProfileData } from "@/lib/actions/context";
 
 export default function ContextPage() {
@@ -123,7 +124,7 @@ export default function ContextPage() {
       <Button
         className="w-full"
         size="lg"
-        disabled={!selectedContext || submitting || userCredits === null}
+        disabled={!selectedContext || submitting || userCredits === null || userCredits < VOTE_PACKAGES[selectedPackageIndex].credits}
         onClick={handleSubmit}
       >
         {submitting ? "Submitting..." : "Submit for Rating"}

@@ -229,7 +229,21 @@ async function computeTrackScores(trackId: string) {
 
       // Include the current track's score in the comparison set so the
       // percentile is computed against all N+1 tracks (not just the N
-      // that were already marked "complete").
+      // that were already marked "complete"). Without this, the highest-
+      // scoring track would always show percentile = 100 (N/N) even
+      // though it wasn't compared against itself.
+      //
+      // NOTE: Percentiles are point-in-time snapshots — they reflect the
+      // pool of completed tracks at the moment THIS track finishes. They
+      // are NOT retroactively updated when new tracks complete later, so
+      // percentiles across tracks are not directly comparable. An early
+      // track scored against 5 peers and a later track scored against 50
+      // peers may both show "80th percentile" but represent very different
+      // rankings. This is an intentional trade-off: recalculating all
+      // percentiles on every completion would be expensive and introduce
+      // its own race conditions. If live-updated percentiles become a
+      // requirement, consider computing them at read time via a SQL
+      // window function (PERCENT_RANK) instead.
       scores.push(overall);
 
       if (scores.length >= 2) {

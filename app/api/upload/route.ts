@@ -48,13 +48,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
   }
 
-  if (!ALLOWED_TYPES.includes(file.type) && !file.name.match(/\.(mp3|wav|m4a)$/i)) {
+  // Require both a recognized MIME type AND a valid file extension.
+  // Rejecting on either mismatch prevents files like "malicious.exe"
+  // with a spoofed audio/mpeg MIME type from being accepted.
+  const rawExt = (file.name.split(".").pop() || "").toLowerCase();
+  const ext = ALLOWED_EXTENSIONS.find((e) => e === rawExt);
+
+  if (!ALLOWED_TYPES.includes(file.type) || !ext) {
     return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
   }
-
-  // Extract and validate extension against allowlist to prevent arbitrary file writes
-  const rawExt = (file.name.split(".").pop() || "").toLowerCase();
-  const ext = ALLOWED_EXTENSIONS.find((e) => e === rawExt) ?? "mp3";
 
   const uploadDir = join(process.cwd(), "public", "uploads");
   await mkdir(uploadDir, { recursive: true });

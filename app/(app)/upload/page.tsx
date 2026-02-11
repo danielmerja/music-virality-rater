@@ -10,6 +10,7 @@ import { AudioPlayer } from "@/components/audio-player";
 import { SnippetTrimmer } from "@/components/snippet-trimmer";
 import { GenreTagSelector } from "@/components/genre-tag-selector";
 import { createTrack } from "@/lib/actions/upload";
+import { evictCachedWaveform } from "@/lib/audio-context";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CloudUploadIcon, Delete02Icon } from "@hugeicons/core-free-icons";
 
@@ -44,9 +45,12 @@ export default function UploadPage() {
       metadataAudioRef.current = null;
     }
 
-    // Revoke previous object URL to avoid memory leaks
+    // Revoke previous object URL and evict its waveform cache entries
     setAudioUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
+      if (prev) {
+        evictCachedWaveform(prev);
+        URL.revokeObjectURL(prev);
+      }
       return null;
     });
 
@@ -81,7 +85,10 @@ export default function UploadPage() {
       toast.error(err instanceof Error ? err.message : "Upload failed");
       setFile(null);
       setAudioUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
+        if (prev) {
+          evictCachedWaveform(prev);
+          URL.revokeObjectURL(prev);
+        }
         return null;
       });
     } finally {
@@ -127,7 +134,10 @@ export default function UploadPage() {
       metadataAudioRef.current.load();
       metadataAudioRef.current = null;
     }
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    if (audioUrl) {
+      evictCachedWaveform(audioUrl);
+      URL.revokeObjectURL(audioUrl);
+    }
     setFile(null);
     setAudioUrl(null);
     setUploadedFilename(null);
@@ -141,10 +151,13 @@ export default function UploadPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Revoke object URL on unmount to prevent memory leaks
+  // Revoke object URL and evict waveform cache on unmount
   useEffect(() => {
     return () => {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      if (audioUrl) {
+        evictCachedWaveform(audioUrl);
+        URL.revokeObjectURL(audioUrl);
+      }
     };
   }, [audioUrl]);
 

@@ -1,30 +1,24 @@
 import { db } from "@/lib/db";
-import { tracks, ratings } from "@/lib/db/schema";
-import { eq, and, ne, lt, sql, asc, notInArray } from "drizzle-orm";
+import { tracks } from "@/lib/db/schema";
+import { eq, and, ne, lt, sql, asc } from "drizzle-orm";
 
 export async function getNextTrackToRate(userId: string) {
-  // Get track IDs already rated by this user
-  const userRatings = await db.query.ratings.findMany({
-    where: eq(ratings.raterId, userId),
-    columns: { trackId: true },
-  });
-
-  const ratedTrackIds = userRatings.map((r) => r.trackId);
-
-  // Find a track: collecting, not owned by user, not rated by user, not deleted
-  const conditions = [
-    eq(tracks.status, "collecting"),
-    ne(tracks.userId, userId),
-    eq(tracks.isDeleted, false),
-    lt(tracks.votesReceived, tracks.votesRequested),
-  ];
-
-  if (ratedTrackIds.length > 0) {
-    conditions.push(notInArray(tracks.id, ratedTrackIds));
-  }
-
+  // Single query with NOT EXISTS subquery — the "not already rated"
+  // filter runs entirely in Postgres instead of loading the user's
+  // full rating history into Node.js memory and building a large
+  // NOT IN (...) clause.
   const result = await db.query.tracks.findFirst({
-    where: and(...conditions),
+    where: and(
+      eq(tracks.status, "collecting"),
+      ne(tracks.userId, userId),
+      eq(tracks.isDeleted, false),
+      lt(tracks.votesReceived, tracks.votesRequested),
+      sql`NOT EXISTS (
+        SELECT 1 FROM ratings
+        WHERE ratings.track_id = ${tracks.id}
+          AND ratings.rater_id = ${userId}
+      )`,
+    ),
     orderBy: [asc(tracks.votesReceived)],
   });
 

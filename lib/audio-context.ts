@@ -25,10 +25,14 @@ export function getSharedAudioContext(): AudioContext {
 }
 
 /**
- * Simple in-memory cache for decoded waveform bar data.
+ * In-memory cache for decoded waveform bar data.
  * Keyed by `${audioUrl}:${barCount}` so two visualizers with
  * the same URL and bar count share the result instantly.
+ *
+ * Capped at MAX_ENTRIES to prevent unbounded growth during long
+ * sessions. Eviction is oldest-first (Map iteration order).
  */
+const MAX_ENTRIES = 64;
 const waveformCache = new Map<string, number[]>();
 
 export function getCachedWaveform(
@@ -43,5 +47,26 @@ export function setCachedWaveform(
   bars: number,
   data: number[],
 ): void {
-  waveformCache.set(`${audioUrl}:${bars}`, data);
+  const key = `${audioUrl}:${bars}`;
+  // Delete first so the re-inserted key moves to the end (newest)
+  waveformCache.delete(key);
+  waveformCache.set(key, data);
+
+  // Evict oldest entries when over capacity
+  while (waveformCache.size > MAX_ENTRIES) {
+    const oldest = waveformCache.keys().next().value;
+    if (oldest !== undefined) waveformCache.delete(oldest);
+  }
+}
+
+/**
+ * Remove all cached entries for a given audio URL (any bar count).
+ * Call this when a blob URL is revoked to avoid retaining dead references.
+ */
+export function evictCachedWaveform(audioUrl: string): void {
+  for (const key of waveformCache.keys()) {
+    if (key.startsWith(`${audioUrl}:`)) {
+      waveformCache.delete(key);
+    }
+  }
 }

@@ -4,14 +4,12 @@
  */
 import path from "path";
 
-const useBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
-
 /** Upload a file and return its public URL. */
 export async function storageUpload(
   filename: string,
   file: File,
 ): Promise<{ url: string }> {
-  if (useBlob) {
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
     const { put } = await import("@vercel/blob");
     const blob = await put(`uploads/${filename}`, file, {
       access: "public",
@@ -30,11 +28,11 @@ export async function storageUpload(
   return { url: `/uploads/${filename}` };
 }
 
-/** Delete one or more files by URL. Best-effort — errors are silently ignored. */
+/** Delete one or more files by URL. Throws on failure so callers can handle retries. */
 export async function storageDelete(urls: string | string[]): Promise<void> {
   const urlArray = Array.isArray(urls) ? urls : [urls];
 
-  if (useBlob) {
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
     const { del } = await import("@vercel/blob");
     await del(urlArray);
     return;
@@ -43,7 +41,7 @@ export async function storageDelete(urls: string | string[]): Promise<void> {
   const { unlink } = await import("fs/promises");
   await Promise.all(
     urlArray.map((u) =>
-      unlink(path.join(process.cwd(), "public", u)).catch(() => {})
+      unlink(path.join(process.cwd(), "public", u))
     ),
   );
 }

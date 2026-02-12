@@ -103,18 +103,12 @@ export function SnippetTrimmer({
         {/* Waveform background */}
         <WaveformVisualizer audioUrl={audioUrl} duration={duration} className="h-full opacity-30" />
 
-        {/* Selected region overlay */}
+        {/* Selected region overlay (clipped to snippet bounds so bars align with background) */}
         <div
-          className="absolute top-0 h-full"
-          style={{ left: `${startPct}%`, width: `${endPct - startPct}%` }}
+          className="pointer-events-none absolute inset-0"
+          style={{ clipPath: `inset(0 ${100 - endPct}% 0 ${startPct}%)` }}
         >
-          <WaveformVisualizer
-            audioUrl={audioUrl}
-            duration={duration}
-            snippetStart={snippetStart}
-            snippetEnd={snippetEnd}
-            className="h-full"
-          />
+          <WaveformVisualizer audioUrl={audioUrl} duration={duration} className="h-full" />
         </div>
 
         {/* Left handle */}

@@ -122,7 +122,14 @@ function ContextPageContent() {
 
       {/* Vote package selector */}
       <div className="mb-6">
-        <h3 className="mb-3 text-sm font-medium">How many votes?</h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-medium">How many votes?</h3>
+          {userCredits !== null && (
+            <span className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{userCredits}</span> credits
+            </span>
+          )}
+        </div>
         <VotePackageSelector
           selectedIndex={selectedPackageIndex}
           onSelect={setSelectedPackageIndex}

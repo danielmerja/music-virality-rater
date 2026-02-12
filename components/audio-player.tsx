@@ -31,6 +31,18 @@ export function AudioPlayer({
   const effectiveStart = snippetStart ?? 0;
   const effectiveEnd = snippetEnd ?? duration;
 
+  // Keep a stable ref to onPlayedOnce so event listeners don't get
+  // re-attached on every render (which could cause missed events).
+  const onPlayedOnceRef = useRef(onPlayedOnce);
+  onPlayedOnceRef.current = onPlayedOnce;
+
+  const markPlayed = useCallback(() => {
+    if (!hasPlayedOnceRef.current) {
+      hasPlayedOnceRef.current = true;
+      onPlayedOnceRef.current?.();
+    }
+  }, []);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -38,22 +50,21 @@ export function AudioPlayer({
     const onLoadedMetadata = () => setDuration(audio.duration);
     const onTimeUpdate = () => {
       setCurrentTime(audio.currentTime);
-      // Stop at snippet end
-      if (snippetEnd !== undefined && audio.currentTime >= snippetEnd) {
+      // Stop at snippet end (but only if it's before the natural end of the audio,
+      // otherwise let the audio finish naturally and rely on `ended`)
+      if (
+        snippetEnd !== undefined &&
+        audio.currentTime >= snippetEnd &&
+        snippetEnd < audio.duration - 0.05
+      ) {
         audio.pause();
         setIsPlaying(false);
-        if (!hasPlayedOnceRef.current) {
-          hasPlayedOnceRef.current = true;
-          onPlayedOnce?.();
-        }
+        markPlayed();
       }
     };
     const onEnded = () => {
       setIsPlaying(false);
-      if (!hasPlayedOnceRef.current) {
-        hasPlayedOnceRef.current = true;
-        onPlayedOnce?.();
-      }
+      markPlayed();
     };
 
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
@@ -65,7 +76,7 @@ export function AudioPlayer({
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("ended", onEnded);
     };
-  }, [snippetEnd, onPlayedOnce]);
+  }, [snippetEnd, markPlayed]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;

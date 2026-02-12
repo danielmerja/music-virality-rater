@@ -55,10 +55,10 @@ export async function submitRating(data: {
   }
   if (track.userId === raterId) throw new Error("You cannot rate your own track");
 
-  // Wrap the rating insert, vote count increment, and rater stats update in a
-  // single transaction so they all succeed or all roll back atomically.
-  // The neon-http driver batches these into one HTTP request.
-  const { updatedTrack, updatedProfile } = await db.transaction(async (tx) => {
+  // Wrap the rating insert, vote count increment, rater stats update, and
+  // credit awarding in a single transaction so they all succeed or all roll
+  // back atomically. The neon-http driver batches these into one HTTP request.
+  const result = await db.transaction(async (tx) => {
     // Create rating
     await tx.insert(ratings).values({
       trackId: data.trackId,
@@ -91,52 +91,50 @@ export async function submitRating(data: {
       throw new Error("Rater profile not found");
     }
 
-    return { updatedTrack: txUpdatedTrack, updatedProfile: txUpdatedProfile };
-  });
-
-  // Check if rating progress reached 5 — use atomic compare-and-set
-  // to prevent concurrent requests from both awarding a credit.
-  let creditEarned = false;
-  if (updatedProfile.ratingProgress >= 5) {
-    // Only reset & award if ratingProgress is still >= 5 (guards against
-    // a concurrent request that already reset it).
-    const [reset] = await db
-      .update(profiles)
-      .set({
-        ratingProgress: 0,
-        credits: sql`${profiles.credits} + 1`,
-      })
-      .where(
-        and(
-          eq(profiles.id, raterId),
-          sql`${profiles.ratingProgress} >= 5`
+    // Check if rating progress reached 5 — use atomic compare-and-set
+    // to prevent concurrent requests from both awarding a credit.
+    let creditEarned = false;
+    if (txUpdatedProfile.ratingProgress >= 5) {
+      // Only reset & award if ratingProgress is still >= 5 (guards against
+      // a concurrent request that already reset it).
+      const [reset] = await tx
+        .update(profiles)
+        .set({
+          ratingProgress: 0,
+          credits: sql`${profiles.credits} + 1`,
+        })
+        .where(
+          and(
+            eq(profiles.id, raterId),
+            sql`${profiles.ratingProgress} >= 5`
+          )
         )
-      )
-      .returning({ id: profiles.id });
+        .returning({ id: profiles.id });
 
-    if (reset) {
-      creditEarned = true;
-      await db.insert(creditTransactions).values({
-        userId: raterId,
-        amount: 1,
-        type: "rating_bonus",
-      });
+      if (reset) {
+        creditEarned = true;
+        await tx.insert(creditTransactions).values({
+          userId: raterId,
+          amount: 1,
+          type: "rating_bonus",
+        });
+      }
     }
-  }
 
-  // If the CAS succeeded, progress was reset to 0. If it didn't
-  // (unlikely race where a concurrent request already reset it), the
-  // DB value may be >= 5. Clamp to 0-4 so the client never sees
-  // an out-of-range value.
-  const newProgress = creditEarned
-    ? 0
-    : Math.max(0, Math.min(updatedProfile.ratingProgress, 4));
+    // If the CAS succeeded, progress was reset to 0. If it didn't
+    // (unlikely race where a concurrent tx already reset it), the
+    // DB value may be >= 5. Clamp to 0-4 so the client never sees
+    // an out-of-range value.
+    const newProgress = creditEarned
+      ? 0
+      : Math.max(0, Math.min(txUpdatedProfile.ratingProgress, 4));
 
-  const result = {
-    updatedTrack,
-    creditEarned,
-    newProgress,
-  };
+    return {
+      updatedTrack: txUpdatedTrack,
+      creditEarned,
+      newProgress,
+    };
+  });
 
   // If track reached vote goal, compute scores. Runs outside the main
   // transaction to keep that transaction short. computeTrackScores uses

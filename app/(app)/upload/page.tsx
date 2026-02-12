@@ -83,6 +83,7 @@ export default function UploadPage() {
   );
 
   const handleSubmit = () => {
+    if (submitting) return;
     if (!file || !title.trim() || !tosAccepted || !isSnippetValid) return;
 
     requireAuth(async () => {
@@ -92,9 +93,10 @@ export default function UploadPage() {
         const clippedFile = await clipAudio(file, snippetStart, snippetEnd);
         const clipDuration = snippetEnd - snippetStart;
 
-        // Upload the clipped WAV
+        // Upload the clipped audio, preserving the original filename (with .mp3 ext)
+        const originalName = file.name.replace(/\.[^.]+$/, ".mp3");
         const formData = new FormData();
-        formData.append("file", clippedFile);
+        formData.append("file", clippedFile, originalName);
         const res = await fetch("/api/upload", { method: "POST", body: formData });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);

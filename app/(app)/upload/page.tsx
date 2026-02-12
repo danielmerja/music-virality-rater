@@ -10,6 +10,7 @@ import { AudioPlayer } from "@/components/audio-player";
 import { SnippetTrimmer } from "@/components/snippet-trimmer";
 import { GenreTagSelector } from "@/components/genre-tag-selector";
 import { createTrack } from "@/lib/actions/upload";
+import { clipAudio } from "@/lib/audio-clip";
 import { evictCachedWaveform } from "@/lib/audio-context";
 import { useAuth } from "@/components/auth-provider";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -22,7 +23,6 @@ export default function UploadPage() {
 
   const [file, setFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [uploadedFilename, setUploadedFilename] = useState<string | null>(null);
   const [metadataLoaded, setMetadataLoaded] = useState(false);
   const [duration, setDuration] = useState(0);
   const [snippetStart, setSnippetStart] = useState(0);
@@ -31,11 +31,10 @@ export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [genreTags, setGenreTags] = useState<string[]>([]);
   const [tosAccepted, setTosAccepted] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleFile = useCallback(async (f: File) => {
+  const handleFile = useCallback((f: File) => {
     setFile(f);
     setTitle(f.name.replace(/\.[^.]+$/, ""));
     setMetadataLoaded(false);
@@ -71,31 +70,6 @@ export default function UploadPage() {
       setSnippetEnd(Math.min(30, dur));
       setMetadataLoaded(true);
     });
-
-    // Upload the file
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", f);
-
-    try {
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setUploadedFilename(data.filename);
-      toast.success("File uploaded successfully");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
-      setFile(null);
-      setAudioUrl((prev) => {
-        if (prev) {
-          evictCachedWaveform(prev);
-          URL.revokeObjectURL(prev);
-        }
-        return null;
-      });
-    } finally {
-      setUploading(false);
-    }
   }, []);
 
   const handleDrop = useCallback(
@@ -109,18 +83,32 @@ export default function UploadPage() {
   );
 
   const handleSubmit = () => {
-    if (!uploadedFilename || !title.trim() || !tosAccepted) return;
+    if (submitting) return;
+    if (!file || !title.trim() || !tosAccepted || !isSnippetValid) return;
 
     requireAuth(async () => {
       setSubmitting(true);
       try {
+        // Clip the audio to the selected snippet range
+        const clippedFile = await clipAudio(file, snippetStart, snippetEnd);
+        const clipDuration = snippetEnd - snippetStart;
+
+        // Upload the clipped audio, preserving the original filename (with .mp3 ext)
+        const originalName = file.name.replace(/\.[^.]+$/, ".mp3");
+        const formData = new FormData();
+        formData.append("file", clippedFile, originalName);
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        // Create track — the blob IS the snippet, so snippet spans the full clip
         const track = await createTrack({
           title: title.trim(),
-          audioFilename: uploadedFilename,
-          duration,
+          audioFilename: data.filename,
+          duration: clipDuration,
           genreTags,
-          snippetStart,
-          snippetEnd,
+          snippetStart: 0,
+          snippetEnd: clipDuration,
         });
         router.push(`/context?trackId=${track.id}`);
       } catch (err) {
@@ -144,7 +132,6 @@ export default function UploadPage() {
     }
     setFile(null);
     setAudioUrl(null);
-    setUploadedFilename(null);
     setMetadataLoaded(false);
     setDuration(0);
     setSnippetStart(0);
@@ -168,7 +155,7 @@ export default function UploadPage() {
   const snippetDuration = snippetEnd - snippetStart;
   const isSnippetValid = snippetDuration >= 15 && snippetDuration <= 30;
   const canSubmit =
-    uploadedFilename && title.trim() && tosAccepted && isSnippetValid && !uploading && metadataLoaded && duration > 0;
+    file && title.trim() && tosAccepted && isSnippetValid && metadataLoaded && duration > 0;
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
@@ -225,10 +212,9 @@ export default function UploadPage() {
               <p className="truncate text-sm font-medium">{file.name}</p>
               <p className="text-xs text-muted-foreground">
                 {(file.size / (1024 * 1024)).toFixed(1)} MB
-                {uploading && " — Uploading..."}
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleClear}>
+            <Button variant="ghost" size="icon" onClick={handleClear} disabled={submitting}>
               <HugeiconsIcon icon={Delete02Icon} size={18} strokeWidth={2} />
             </Button>
           </div>
@@ -295,7 +281,7 @@ export default function UploadPage() {
             disabled={!canSubmit || submitting}
             onClick={handleSubmit}
           >
-            {submitting ? "Saving..." : "Choose Context →"}
+            {submitting ? "Clipping & uploading..." : "Choose Context →"}
           </Button>
         </div>
       )}

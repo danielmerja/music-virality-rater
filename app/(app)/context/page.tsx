@@ -14,7 +14,7 @@ import { submitForRating, getUserProfileData } from "@/lib/actions/context";
 
 function ContextPageContent() {
   const router = useRouter();
-  const { requireAuth } = useAuth();
+  const { requireAuth, user } = useAuth();
   const searchParams = useSearchParams();
   const trackId = searchParams.get("trackId");
 
@@ -26,7 +26,17 @@ function ContextPageContent() {
   const [ratingProgress, setRatingProgress] = useState(0);
   const [profileError, setProfileError] = useState(false);
 
+  // Only fetch profile data when logged in. Use user.id as the dependency
+  // so it refetches on sign-in without spurious refetches from object
+  // reference changes.
+  const userId = user?.id;
   useEffect(() => {
+    if (!userId) {
+      setUserCredits(null);
+      setRatingProgress(0);
+      setProfileError(false);
+      return;
+    }
     getUserProfileData()
       .then(({ credits, ratingProgress }) => {
         setUserCredits(credits);
@@ -38,7 +48,7 @@ function ContextPageContent() {
         // (the disabled check includes userCredits === null).
         setProfileError(true);
       });
-  }, []);
+  }, [userId]);
 
   const handleSubmit = () => {
     if (!trackId || !selectedContext) return;
@@ -128,10 +138,15 @@ function ContextPageContent() {
         </p>
       </div>
 
-      {/* Profile error */}
+      {/* Auth / profile status */}
+      {!userId && (
+        <p className="mb-4 text-center text-sm text-muted-foreground">
+          Sign in to submit your track for rating.
+        </p>
+      )}
       {profileError && (
         <p className="mb-4 text-center text-sm text-destructive">
-          Could not load your profile. Please refresh the page or sign in again.
+          Could not load your profile. Please refresh the page.
         </p>
       )}
 

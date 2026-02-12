@@ -71,10 +71,13 @@ export default function RatePage() {
     }
   }, []);
 
-  // Refetch when user signs in
+  // Refetch when user signs in. Use user?.id rather than the full user object
+  // to avoid spurious refetches when better-auth's useSession returns a new
+  // object reference on background refreshes without an actual user change.
+  const userId = user?.id;
   useEffect(() => {
     fetchTrack();
-  }, [fetchTrack, user]);
+  }, [fetchTrack, userId]);
 
   const context = track?.contextId ? getContextById(track.contextId) : null;
   const dimensions: Dimension[] = context?.dimensions ?? [];

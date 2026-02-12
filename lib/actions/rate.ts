@@ -55,37 +55,44 @@ export async function submitRating(data: {
   }
   if (track.userId === raterId) throw new Error("You cannot rate your own track");
 
-  // Create rating
-  await db.insert(ratings).values({
-    trackId: data.trackId,
-    raterId,
-    dimension1: data.dimension1,
-    dimension2: data.dimension2,
-    dimension3: data.dimension3,
-    dimension4: data.dimension4,
-    feedback: data.feedback || null,
+  // Wrap the rating insert, vote count increment, and rater stats update in a
+  // single transaction so they all succeed or all roll back atomically.
+  // The neon-http driver batches these into one HTTP request.
+  const { updatedTrack, updatedProfile } = await db.transaction(async (tx) => {
+    // Create rating
+    await tx.insert(ratings).values({
+      trackId: data.trackId,
+      raterId,
+      dimension1: data.dimension1,
+      dimension2: data.dimension2,
+      dimension3: data.dimension3,
+      dimension4: data.dimension4,
+      feedback: data.feedback || null,
+    });
+
+    // Increment votes_received on track
+    const [txUpdatedTrack] = await tx
+      .update(tracks)
+      .set({ votesReceived: sql`${tracks.votesReceived} + 1` })
+      .where(eq(tracks.id, data.trackId))
+      .returning();
+
+    // Increment rater stats
+    const [txUpdatedProfile] = await tx
+      .update(profiles)
+      .set({
+        tracksRated: sql`${profiles.tracksRated} + 1`,
+        ratingProgress: sql`${profiles.ratingProgress} + 1`,
+      })
+      .where(eq(profiles.id, raterId))
+      .returning();
+
+    if (!txUpdatedProfile) {
+      throw new Error("Rater profile not found");
+    }
+
+    return { updatedTrack: txUpdatedTrack, updatedProfile: txUpdatedProfile };
   });
-
-  // Increment votes_received on track
-  const [updatedTrack] = await db
-    .update(tracks)
-    .set({ votesReceived: sql`${tracks.votesReceived} + 1` })
-    .where(eq(tracks.id, data.trackId))
-    .returning();
-
-  // Increment rater stats
-  const [updatedProfile] = await db
-    .update(profiles)
-    .set({
-      tracksRated: sql`${profiles.tracksRated} + 1`,
-      ratingProgress: sql`${profiles.ratingProgress} + 1`,
-    })
-    .where(eq(profiles.id, raterId))
-    .returning();
-
-  if (!updatedProfile) {
-    throw new Error("Rater profile not found");
-  }
 
   // Check if rating progress reached 5 — use atomic compare-and-set
   // to prevent concurrent requests from both awarding a credit.

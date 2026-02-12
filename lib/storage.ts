@@ -8,7 +8,10 @@ const publicDir = () => path.join(process.cwd(), "public");
 
 /** Resolve a path under public/ and verify it stays within bounds. */
 function safePublicPath(...segments: string[]): string {
-  const resolved = path.resolve(publicDir(), ...segments);
+  // Strip leading slashes/backslashes so path.resolve treats segments as
+  // relative (otherwise '/uploads/f.mp3' is treated as an absolute root).
+  const cleaned = segments.map((s) => s.replace(/^[/\\]+/, ""));
+  const resolved = path.resolve(publicDir(), ...cleaned);
   if (!resolved.startsWith(publicDir() + path.sep) && resolved !== publicDir()) {
     throw new Error(`Path traversal blocked: ${segments.join("/")}`);
   }

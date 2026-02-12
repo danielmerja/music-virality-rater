@@ -214,7 +214,7 @@ export default function UploadPage() {
                 {(file.size / (1024 * 1024)).toFixed(1)} MB
               </p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleClear}>
+            <Button variant="ghost" size="icon" onClick={handleClear} disabled={submitting}>
               <HugeiconsIcon icon={Delete02Icon} size={18} strokeWidth={2} />
             </Button>
           </div>

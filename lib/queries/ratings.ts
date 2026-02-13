@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { ratings, aiInsights } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
-import type { AIInsight } from "@/lib/actions/ai";
+import type { AIInsight } from "@/lib/services/ai";
 
 export async function getTrackRatings(trackId: string) {
   return db.query.ratings.findMany({

@@ -13,7 +13,7 @@ import { InsightCard } from "@/components/insight-card";
 import { AudioPlayer } from "@/components/audio-player";
 import { formatPercentile } from "@/lib/utils";
 import type { Dimension } from "@/lib/constants/contexts";
-import type { AIInsight } from "@/lib/actions/ai";
+import type { AIInsight } from "@/lib/services/ai";
 
 interface ResultsViewProps {
   track: {

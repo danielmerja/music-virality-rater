@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ResultsView } from "@/components/results-view";
 import { deleteTrack } from "@/lib/actions/track";
 import type { Dimension } from "@/lib/constants/contexts";
-import type { AIInsight } from "@/lib/actions/ai";
+import type { AIInsight } from "@/lib/services/ai";
 
 interface ResultsViewWrapperProps {
   track: {

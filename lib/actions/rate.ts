@@ -5,7 +5,7 @@ import { ratings, tracks, profiles, creditTransactions } from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq, sql, and } from "drizzle-orm";
-import { generateAIInsights } from "@/lib/actions/ai";
+import { generateAIInsights } from "@/lib/services/ai";
 
 export async function submitRating(data: {
   trackId: string;

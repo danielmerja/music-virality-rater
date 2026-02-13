@@ -79,7 +79,7 @@ export function ResultsView({
           <p className="text-sm font-medium text-muted-foreground">
             Overall Virality Score
           </p>
-          <p className="mt-1 text-5xl font-bold text-primary">{score.toFixed(1)}</p>
+          <p className="mt-1 text-5xl font-bold text-primary">{Math.round((score / 3) * 100)}%</p>
           {track.percentile !== null ? (
             <p className="mt-2 text-sm font-medium">
               {formatPercentile(track.percentile)}

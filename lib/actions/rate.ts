@@ -5,6 +5,17 @@ import { ratings, tracks, profiles, creditTransactions } from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq, sql, and } from "drizzle-orm";
+import { generateAIInsights } from "@/lib/services/ai";
+
+// --- Constants ---
+const MIN_SCORE = 0;
+const MAX_SCORE = 3;
+const MAX_FEEDBACK_LENGTH = 2000;
+const MIN_CREDIT_PER_RATING = 1;
+const CREDIT_DURATION_DIVISOR = 10; // creditsEarned = max(1, round(clipDuration / 10))
+const AI_MILESTONES = [10, 20, 50] as const;
+const SCORE_DECIMAL_PLACES = 10; // multiply/divide factor for rounding to 1 decimal
+const MIN_TRACKS_FOR_PERCENTILE = 2;
 
 export async function submitRating(data: {
   trackId: string;
@@ -24,14 +35,14 @@ export async function submitRating(data: {
 
   // Validate dimension scores are integers between 0 and 3
   const dims = [data.dimension1, data.dimension2, data.dimension3, data.dimension4];
-  if (dims.some((d) => !Number.isInteger(d) || d < 0 || d > 3)) {
-    throw new Error("Invalid rating values. Each dimension must be an integer between 0 and 3.");
+  if (dims.some((d) => !Number.isInteger(d) || d < MIN_SCORE || d > MAX_SCORE)) {
+    throw new Error(`Invalid rating values. Each dimension must be an integer between ${MIN_SCORE} and ${MAX_SCORE}.`);
   }
 
   // Validate feedback if provided
   if (data.feedback !== undefined && data.feedback !== null) {
-    if (typeof data.feedback !== "string" || data.feedback.length > 2000) {
-      throw new Error("Feedback must be a string of 2000 characters or fewer.");
+    if (typeof data.feedback !== "string" || data.feedback.length > MAX_FEEDBACK_LENGTH) {
+      throw new Error(`Feedback must be a string of ${MAX_FEEDBACK_LENGTH} characters or fewer.`);
     }
   }
 
@@ -77,9 +88,21 @@ export async function submitRating(data: {
     .where(eq(tracks.id, data.trackId))
     .returning();
 
+  // Fire-and-forget AI insight generation at vote milestones.
+  // Only triggers if the vote package includes that many votes.
+  if (
+    updatedTrack &&
+    (AI_MILESTONES as readonly number[]).includes(updatedTrack.votesReceived) &&
+    updatedTrack.votesReceived <= updatedTrack.votesRequested
+  ) {
+    generateAIInsights(data.trackId, updatedTrack.votesReceived).catch(
+      (err) => console.error("[AI Insights] Background generation failed:", err)
+    );
+  }
+
   // Compute credits earned based on clip duration
   const clipDuration = (track.snippetEnd ?? 0) - (track.snippetStart ?? 0);
-  const creditsEarned = Math.max(1, Math.round(clipDuration / 10));
+  const creditsEarned = Math.max(MIN_CREDIT_PER_RATING, Math.round(clipDuration / CREDIT_DURATION_DIVISOR));
 
   // Increment rater stats and award credits
   const [updatedProfile] = await db
@@ -148,7 +171,7 @@ async function computeTrackScores(trackId: string) {
 
   // Round once to 1 decimal place so the percentile comparison uses
   // the same precision as stored overallScore values from other tracks.
-  const overall = Math.round(((d1 + d2 + d3 + d4) / 4) * 10) / 10;
+  const overall = Math.round(((d1 + d2 + d3 + d4) / 4) * SCORE_DECIMAL_PLACES) / SCORE_DECIMAL_PLACES;
 
   // Get track to find context for percentile
   const trackData = await db.query.tracks.findFirst({
@@ -176,7 +199,7 @@ async function computeTrackScores(trackId: string) {
     // that were already marked "complete").
     scores.push(overall);
 
-    if (scores.length >= 2) {
+    if (scores.length >= MIN_TRACKS_FOR_PERCENTILE) {
       const below = scores.filter((s) => s < overall).length;
       percentile = Math.round((below / (scores.length - 1)) * 100);
     }

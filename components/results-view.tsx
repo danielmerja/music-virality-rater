@@ -14,6 +14,7 @@ import { InsightCard } from "@/components/insight-card";
 import { AudioPlayer } from "@/components/audio-player";
 import { formatPercentile } from "@/lib/utils";
 import type { Dimension } from "@/lib/constants/contexts";
+import type { AIInsight } from "@/lib/services/ai";
 
 interface ResultsViewProps {
   track: {
@@ -32,6 +33,7 @@ interface ResultsViewProps {
   dimensions: Dimension[];
   dimensionAverages: number[];
   insights: { title: string; description: string; variant: "success" | "warning" | "default" }[];
+  aiInsights?: AIInsight[] | null;
   isOwner?: boolean;
   onDelete?: () => void;
 }
@@ -41,6 +43,7 @@ export function ResultsView({
   dimensions,
   dimensionAverages,
   insights,
+  aiInsights,
   isOwner,
   onDelete,
 }: ResultsViewProps) {
@@ -163,6 +166,27 @@ export function ResultsView({
             {insights.map((insight, i) => (
               <InsightCard
                 key={i}
+                title={insight.title}
+                description={insight.description}
+                variant={insight.variant}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* AI Insights */}
+      {aiInsights && aiInsights.length > 0 && (
+        <div className="mb-6">
+          <h2 className="mb-3 flex items-center gap-2 font-semibold">
+            <span>🤖</span> AI Insights
+          </h2>
+          <div className="space-y-3">
+            {aiInsights.map((insight, i) => (
+              <InsightCard
+                key={i}
+                emoji={insight.emoji}
+                category={insight.category}
                 title={insight.title}
                 description={insight.description}
                 variant={insight.variant}

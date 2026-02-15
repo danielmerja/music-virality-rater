@@ -15,6 +15,7 @@ import { AudioPlayer } from "@/components/audio-player";
 import { formatPercentile } from "@/lib/utils";
 import type { Dimension } from "@/lib/constants/contexts";
 import type { AIInsight } from "@/lib/services/ai";
+import { ProductionStageBadge } from "@/components/production-stage-badge";
 
 interface ResultsViewProps {
   track: {
@@ -29,6 +30,7 @@ interface ResultsViewProps {
     audioFilename: string;
     snippetStart: number | null;
     snippetEnd: number | null;
+    productionStage: string | null;
   };
   dimensions: Dimension[];
   dimensionAverages: number[];
@@ -72,11 +74,14 @@ export function ResultsView({
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">{track.title}</h1>
-          {isComplete && (
-            <Badge variant="default" className="mt-1">
-              Complete
-            </Badge>
-          )}
+          <div className="mt-1 flex items-center gap-2">
+            {isComplete && (
+              <Badge variant="default">
+                Complete
+              </Badge>
+            )}
+            <ProductionStageBadge stageId={track.productionStage} />
+          </div>
         </div>
         {isOwner && onDelete && (
           <Button variant="ghost" size="sm" onClick={onDelete} className="text-destructive">

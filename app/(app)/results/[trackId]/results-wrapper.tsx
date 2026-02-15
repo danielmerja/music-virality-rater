@@ -20,6 +20,7 @@ interface ResultsViewWrapperProps {
     audioFilename: string;
     snippetStart: number | null;
     snippetEnd: number | null;
+    productionStage: string | null;
   };
   dimensions: Dimension[];
   dimensionAverages: number[];

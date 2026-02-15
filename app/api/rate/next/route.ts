@@ -24,6 +24,7 @@ export async function GET() {
       title: track.title,
       audioFilename: track.audioFilename,
       contextId: track.contextId,
+      productionStage: track.productionStage,
       snippetStart: track.snippetStart,
       snippetEnd: track.snippetEnd,
     },

@@ -107,6 +107,7 @@ export const tracks = pgTable("tracks", {
   duration: real("duration"),
   genreTags: text("genre_tags").array().default([]),
   contextId: text("context_id"),
+  productionStage: text("production_stage"), // 'demo' | 'mixed' | 'mastered'
   status: text("status").notNull().default("draft"), // draft | collecting | complete
   snippetStart: real("snippet_start"),
   snippetEnd: real("snippet_end"),

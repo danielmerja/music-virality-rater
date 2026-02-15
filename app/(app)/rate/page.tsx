@@ -11,12 +11,14 @@ import { useAuth } from "@/components/auth-provider";
 import { getContextById, type Dimension } from "@/lib/constants/contexts";
 import { submitRating } from "@/lib/actions/rate";
 import { Logo } from "@/components/logo";
+import { ProductionStageBadge } from "@/components/production-stage-badge";
 
 interface TrackToRate {
   id: string;
   title: string;
   audioFilename: string;
   contextId: string;
+  productionStage: string | null;
   snippetStart: number | null;
   snippetEnd: number | null;
 }
@@ -149,13 +151,16 @@ export default function RatePage() {
         <Logo className="text-2xl" />
       </div>
 
-      {/* Context badge + track count */}
+      {/* Context badge + production stage + track count */}
       <div className="mb-4 flex items-center justify-between">
-        {context && (
-          <Badge variant="secondary">
-            {context.icon} {context.name}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {context && (
+            <Badge variant="secondary">
+              {context.icon} {context.name}
+            </Badge>
+          )}
+          <ProductionStageBadge stageId={track.productionStage} />
+        </div>
         <span className="text-xs text-muted-foreground">
           Track #{trackCount}
         </span>

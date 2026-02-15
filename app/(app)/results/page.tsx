@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { SignInPrompt } from "@/components/sign-in-prompt";
 import { Logo } from "@/components/logo";
+import { getProductionStageById } from "@/lib/constants/production-stages";
 
 export default async function ResultsListPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -52,6 +53,14 @@ export default async function ResultsListPage() {
                 <Badge variant={track.status === "complete" ? "default" : "secondary"}>
                   {track.status === "complete" ? "Complete" : "Collecting"}
                 </Badge>
+                {track.productionStage && (() => {
+                  const stage = getProductionStageById(track.productionStage);
+                  return stage ? (
+                    <span className="text-xs text-muted-foreground" title={stage.description}>
+                      {stage.emoji} {stage.label}
+                    </span>
+                  ) : null;
+                })()}
                 <span className="text-xs text-muted-foreground">
                   {track.votesReceived}/{track.votesRequested} votes
                 </span>

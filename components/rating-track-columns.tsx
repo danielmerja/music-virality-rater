@@ -36,7 +36,7 @@ export function RatingTrackColumns({
           <div key={dim.key} className="flex flex-col items-center gap-1.5">
             {/* Header */}
             <span className="text-xl">{dim.emoji}</span>
-            <span className="text-[11px] font-medium leading-tight text-center min-h-[2rem] flex items-center">
+            <span className="text-[11px] font-medium leading-tight text-center min-h-8 flex items-center">
               {dim.name}
             </span>
 

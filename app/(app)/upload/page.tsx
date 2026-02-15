@@ -86,8 +86,10 @@ export default function UploadPage() {
       });
   }, [userId]);
 
+  const creditsLoading = userId != null && userCredits === null;
   const insufficientCredits =
     userId != null && userCredits !== null && userCredits < MIN_CREDITS;
+  const dropDisabled = creditsLoading || insufficientCredits;
 
   const handleFile = useCallback((f: File) => {
     setFile(f);
@@ -296,15 +298,15 @@ export default function UploadPage() {
             onDrop={(e) => {
               e.preventDefault();
               setIsDragOver(false);
-              if (!insufficientCredits) handleDrop(e);
+              if (!dropDisabled) handleDrop(e);
             }}
             onClick={() => {
-              if (insufficientCredits) return;
+              if (dropDisabled) return;
               requireAuth(() => fileInputRef.current?.click());
             }}
             className={cn(
               "flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed p-10 text-center transition-colors",
-              insufficientCredits
+              dropDisabled
                 ? "cursor-not-allowed border-border opacity-50"
                 : isDragOver
                   ? "border-primary bg-primary/5"
@@ -329,7 +331,7 @@ export default function UploadPage() {
             type="file"
             accept=".mp3,.wav,.m4a,audio/*"
             className="hidden"
-            disabled={insufficientCredits}
+            disabled={dropDisabled}
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) requireAuth(() => handleFile(f));

@@ -13,7 +13,7 @@ const MAX_SCORE = 3;
 const MAX_FEEDBACK_LENGTH = 2000;
 const MIN_CREDIT_PER_RATING = 1;
 const CREDIT_DURATION_DIVISOR = 10; // creditsEarned = max(1, round(clipDuration / 10))
-const AI_MILESTONES = [10, 20, 50] as const;
+const AI_MILESTONES = [5, 10, 20, 50] as const;
 const SCORE_DECIMAL_PLACES = 10; // multiply/divide factor for rounding to 1 decimal
 const MIN_TRACKS_FOR_PERCENTILE = 2;
 

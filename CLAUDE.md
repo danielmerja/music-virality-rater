@@ -82,7 +82,7 @@ Beyond the better-auth tables (user, session, account, verification), the app de
 - **tracks** — audio tracks with `status` (draft → collecting → complete), snippet bounds, vote counts, `overallScore`, `percentile`, `shareToken`
 - **ratings** — 4 dimension scores (0–3) per track per rater, unique constraint on (trackId, raterId)
 - **uploads** — temporary Vercel Blob file tracking with `consumed` flag
-- **aiInsights** — AI-generated insights per track per milestone (10/20/50), unique on `(trackId, milestone)`, stored as JSON string
+- **aiInsights** — AI-generated insights per track per milestone (5/10/20/50), unique on `(trackId, milestone)`, stored as JSON string
 - **creditTransactions** — audit log of all credit changes with type + referenceId
 
 DB client (`lib/db/index.ts`) uses `drizzle-orm/neon-http` with `@neondatabase/serverless`. In dev, the Neon Local proxy runs via Docker on port 5434.
@@ -125,7 +125,7 @@ const { requireAuth } = useAuth()
 
 ### AI Insights System (`lib/services/ai.ts`)
 
-Fire-and-forget AI-powered insights generated at vote milestones (10, 20, 50). Called from `submitRating()` when `votesReceived` hits a milestone.
+Fire-and-forget AI-powered insights generated at vote milestones (5, 10, 20, 50). Called from `submitRating()` when `votesReceived` hits a milestone.
 
 - Uses Claude Opus 4.6 via AI SDK with Zod structured output
 - Generates 2–4 insights per milestone (categories: TARGET AUDIENCE, SIMILAR TRACKS, SUGGESTION, STRENGTH, OPPORTUNITY)

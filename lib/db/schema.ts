@@ -158,7 +158,7 @@ export const aiInsights = pgTable(
     trackId: uuid("track_id")
       .notNull()
       .references(() => tracks.id),
-    milestone: integer("milestone").notNull(), // 10, 20, or 50
+    milestone: integer("milestone").notNull(), // 5, 10, 20, or 50
     insights: text("insights").notNull(), // JSON string of insight array
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

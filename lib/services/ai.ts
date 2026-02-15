@@ -39,7 +39,7 @@ const aiInsightSchema = z.object({
   description: z
     .string()
     .describe(
-      "2-3 sentence actionable insight with specific, data-backed observations"
+      "1-2 concise sentences. Be punchy and specific — no filler words."
     ),
   variant: z
     .enum(["success", "warning", "default"])
@@ -52,7 +52,7 @@ export type AIInsight = z.infer<typeof aiInsightSchema>;
 
 /**
  * Generate AI-powered analytical insights for a track at a vote milestone.
- * Called as fire-and-forget when votesReceived hits 10, 20, or 50.
+ * Called as fire-and-forget when votesReceived hits 5, 10, 20, or 50.
  *
  * This is an internal function — NOT a server action. It should only be
  * called from trusted server-side code (e.g., submitRating in rate.ts).
@@ -62,7 +62,7 @@ export async function generateAIInsights(
   milestone: number
 ): Promise<void> {
   // Guard: only generate for valid milestones
-  if (![10, 20, 50].includes(milestone)) return;
+  if (![5, 10, 20, 50].includes(milestone)) return;
 
   // Check if insights already exist for this track + milestone (idempotency)
   const existing = await db.query.aiInsights.findFirst({
@@ -108,7 +108,7 @@ export async function generateAIInsights(
     dimensionAverages.reduce((a, b) => a + b, 0) / dimensionAverages.length;
 
   // Determine how many insights to generate based on milestone
-  const insightCount = milestone === 10 ? 2 : milestone === 20 ? 3 : 4;
+  const insightCount = milestone === 5 ? 2 : milestone === 10 ? 3 : milestone === 20 ? 4 : 5;
 
   // Sanitize all user-controlled text before interpolation
   const safeTitle = sanitizeForPrompt(track.title, MAX_TITLE_LENGTH);
@@ -149,7 +149,7 @@ Generate exactly ${insightCount} analytical insights. Each insight should be spe
 - STRENGTH: What's working well and how to leverage it
 - OPPORTUNITY: Untapped potential based on the score patterns
 
-Make each insight data-driven, referencing specific scores and patterns. Be direct and practical.`;
+BREVITY IS CRITICAL. Each insight description must be 1-2 short sentences max (~30 words). Be punchy, specific, and data-driven — reference scores directly. No filler, no preamble, no hedging. Write like a sharp analyst texting a colleague, not writing an essay. Never use dashes (—, –, -) within sentences; use commas or periods instead.`;
 
   try {
     const { output } = await generateText({

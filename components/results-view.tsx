@@ -61,7 +61,7 @@ export function ResultsView({
 
   const isComplete = track.status === "complete";
   const score = track.overallScore ?? 0;
-  const hasVotes = dimensionAverages.some((a) => a > 0);
+  const hasVotes = track.votesReceived > 0;
   const preliminaryScore = hasVotes
     ? dimensionAverages.reduce((a, b) => a + b, 0) / dimensionAverages.length
     : null;
@@ -88,7 +88,7 @@ export function ResultsView({
       {/* Vote Progress (collecting only) */}
       {!isComplete && (
         <div className="mb-6">
-          <Progress value={(track.votesReceived / track.votesRequested) * 100} className="h-2" />
+          <Progress value={track.votesRequested > 0 ? (track.votesReceived / track.votesRequested) * 100 : 0} className="h-2" />
           <p className="mt-1 text-xs text-muted-foreground">
             {track.votesReceived} of {track.votesRequested} votes collected
           </p>

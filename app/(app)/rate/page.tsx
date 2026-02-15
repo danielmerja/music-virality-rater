@@ -10,12 +10,15 @@ import { RatingTrackColumns } from "@/components/rating-track-columns";
 import { useAuth } from "@/components/auth-provider";
 import { getContextById, type Dimension } from "@/lib/constants/contexts";
 import { submitRating } from "@/lib/actions/rate";
+import { Logo } from "@/components/logo";
+import { ProductionStageBadge } from "@/components/production-stage-badge";
 
 interface TrackToRate {
   id: string;
   title: string;
   audioFilename: string;
   contextId: string;
+  productionStage: string | null;
   snippetStart: number | null;
   snippetEnd: number | null;
 }
@@ -133,6 +136,7 @@ export default function RatePage() {
   if (noTracks || !track) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <Logo className="text-2xl" />
         <p className="text-lg font-medium">No tracks to rate right now</p>
         <p className="text-sm text-muted-foreground">
           Check back later — new tracks are submitted all the time!
@@ -143,13 +147,20 @@ export default function RatePage() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
-      {/* Context badge + track count */}
+      <div className="mb-6 flex justify-center">
+        <Logo className="text-2xl" />
+      </div>
+
+      {/* Context badge + production stage + track count */}
       <div className="mb-4 flex items-center justify-between">
-        {context && (
-          <Badge variant="secondary">
-            {context.icon} {context.name}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {context && (
+            <Badge variant="secondary">
+              {context.icon} {context.name}
+            </Badge>
+          )}
+          <ProductionStageBadge stageId={track.productionStage} />
+        </div>
         <span className="text-xs text-muted-foreground">
           Track #{trackCount}
         </span>

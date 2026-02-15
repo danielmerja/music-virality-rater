@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/auth-provider";
 import { AuthModal } from "@/components/auth-modal";
 import { BottomNav } from "@/components/bottom-nav";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -44,10 +45,12 @@ export default function RootLayout({
           />
         )}
         <AuthProvider>
-          <div className="min-h-screen pb-20">{children}</div>
-          <BottomNav />
-          <AuthModal />
-          <Toaster position="top-right" />
+          <TooltipProvider delayDuration={300}>
+            <div className="min-h-screen pb-20">{children}</div>
+            <BottomNav />
+            <AuthModal />
+            <Toaster position="top-right" />
+          </TooltipProvider>
         </AuthProvider>
       </body>
     </html>

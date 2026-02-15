@@ -107,6 +107,7 @@ export const tracks = pgTable("tracks", {
   duration: real("duration"),
   genreTags: text("genre_tags").array().default([]),
   contextId: text("context_id"),
+  productionStage: text("production_stage"), // 'demo' | 'mixed' | 'mastered'
   status: text("status").notNull().default("draft"), // draft | collecting | complete
   snippetStart: real("snippet_start"),
   snippetEnd: real("snippet_end"),
@@ -158,7 +159,7 @@ export const aiInsights = pgTable(
     trackId: uuid("track_id")
       .notNull()
       .references(() => tracks.id),
-    milestone: integer("milestone").notNull(), // 10, 20, or 50
+    milestone: integer("milestone").notNull(), // 5, 10, 20, or 50
     insights: text("insights").notNull(), // JSON string of insight array
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

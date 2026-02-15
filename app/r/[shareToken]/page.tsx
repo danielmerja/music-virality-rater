@@ -43,6 +43,7 @@ export default async function PublicResultsPage({
         audioFilename: track.audioFilename,
         snippetStart: track.snippetStart,
         snippetEnd: track.snippetEnd,
+        productionStage: track.productionStage,
       }}
       dimensions={dimensions}
       dimensionAverages={dimensionAverages}

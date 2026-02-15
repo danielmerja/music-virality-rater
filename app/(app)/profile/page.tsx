@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ProfileTracks } from "./profile-tracks";
 import { LogoutButton } from "./logout-button";
 import { SignInPrompt } from "@/components/sign-in-prompt";
+import { Logo } from "@/components/logo";
 
 export default async function ProfilePage({
   searchParams,
@@ -47,6 +48,10 @@ export default async function ProfilePage({
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
+      <div className="mb-6 flex justify-center">
+        <Logo className="text-2xl" />
+      </div>
+
       {/* Avatar + Info */}
       <div className="mb-6 flex items-center gap-4">
         <Avatar className="h-16 w-16">

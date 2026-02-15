@@ -15,6 +15,7 @@ import { AudioPlayer } from "@/components/audio-player";
 import { formatPercentile } from "@/lib/utils";
 import type { Dimension } from "@/lib/constants/contexts";
 import type { AIInsight } from "@/lib/services/ai";
+import { ProductionStageBadge } from "@/components/production-stage-badge";
 
 interface ResultsViewProps {
   track: {
@@ -29,6 +30,7 @@ interface ResultsViewProps {
     audioFilename: string;
     snippetStart: number | null;
     snippetEnd: number | null;
+    productionStage: string | null;
   };
   dimensions: Dimension[];
   dimensionAverages: number[];
@@ -61,7 +63,7 @@ export function ResultsView({
 
   const isComplete = track.status === "complete";
   const score = track.overallScore ?? 0;
-  const hasVotes = dimensionAverages.some((a) => a > 0);
+  const hasVotes = track.votesReceived > 0;
   const preliminaryScore = hasVotes
     ? dimensionAverages.reduce((a, b) => a + b, 0) / dimensionAverages.length
     : null;
@@ -72,11 +74,14 @@ export function ResultsView({
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">{track.title}</h1>
-          {isComplete && (
-            <Badge variant="default" className="mt-1">
-              Complete
-            </Badge>
-          )}
+          <div className="mt-1 flex items-center gap-2">
+            {isComplete && (
+              <Badge variant="default">
+                Complete
+              </Badge>
+            )}
+            <ProductionStageBadge stageId={track.productionStage} />
+          </div>
         </div>
         {isOwner && onDelete && (
           <Button variant="ghost" size="sm" onClick={onDelete} className="text-destructive">
@@ -88,7 +93,7 @@ export function ResultsView({
       {/* Vote Progress (collecting only) */}
       {!isComplete && (
         <div className="mb-6">
-          <Progress value={(track.votesReceived / track.votesRequested) * 100} className="h-2" />
+          <Progress value={track.votesRequested > 0 ? (track.votesReceived / track.votesRequested) * 100 : 0} className="h-2" />
           <p className="mt-1 text-xs text-muted-foreground">
             {track.votesReceived} of {track.votesRequested} votes collected
           </p>

@@ -1,12 +1,20 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { tracks, profiles, uploads } from "@/lib/db/schema";
+import {
+  tracks,
+  profiles,
+  uploads,
+  creditTransactions,
+} from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { ensureProfile } from "@/lib/queries/profiles";
+import { VOTE_PACKAGES } from "@/lib/constants/packages";
+import { getContextById } from "@/lib/constants/contexts";
+import { PRODUCTION_STAGES } from "@/lib/constants/production-stages";
 
 /** Validates that a string is a valid audio upload path (local or Vercel Blob) */
 function isValidAudioUrl(url: string): boolean {
@@ -27,7 +35,13 @@ function isValidAudioUrl(url: string): boolean {
   }
 }
 
-export async function createTrack(data: {
+const VALID_STAGE_IDS = new Set(PRODUCTION_STAGES.map((s) => s.id));
+
+/**
+ * Validates common track input fields shared between createTrack and
+ * createAndSubmitTrack.
+ */
+function validateTrackInputs(data: {
   title: string;
   audioFilename: string;
   duration: number;
@@ -35,14 +49,7 @@ export async function createTrack(data: {
   snippetStart: number;
   snippetEnd: number;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Unauthorized");
-
-  const userId = session.user.id;
-
-  // --- Validate inputs ---
-
-  // 1. Title: must be a non-empty string with a reasonable length limit
+  // 1. Title
   if (typeof data.title !== "string" || !data.title.trim()) {
     throw new Error("Title is required");
   }
@@ -50,7 +57,7 @@ export async function createTrack(data: {
     throw new Error("Title must be 200 characters or fewer");
   }
 
-  // 2. Genre tags: at most 5 tags, each a non-empty string of at most 50 chars
+  // 2. Genre tags
   if (!Array.isArray(data.genreTags)) {
     throw new Error("Genre tags must be an array");
   }
@@ -66,17 +73,17 @@ export async function createTrack(data: {
     }
   }
 
-  // 3. URL check: must be a valid audio URL produced by /api/upload
+  // 3. Audio URL
   if (!isValidAudioUrl(data.audioFilename)) {
     throw new Error("Invalid audio file URL");
   }
 
-  // 4. Validate duration is a positive finite number
+  // 4. Duration
   if (!Number.isFinite(data.duration) || data.duration <= 0) {
     throw new Error("Invalid duration");
   }
 
-  // 5. Validate snippet bounds are within the track and form a valid range
+  // 5. Snippet bounds
   const { snippetStart, snippetEnd, duration } = data;
   if (
     !Number.isFinite(snippetStart) ||
@@ -86,7 +93,7 @@ export async function createTrack(data: {
     snippetEnd <= snippetStart
   ) {
     throw new Error(
-      "Invalid snippet bounds. Start must be >= 0, end must be <= duration, and end must be > start."
+      "Invalid snippet bounds. Start must be >= 0, end must be <= duration, and end must be > start.",
     );
   }
 
@@ -94,14 +101,31 @@ export async function createTrack(data: {
   if (snippetDuration < 15 || snippetDuration > 30) {
     throw new Error("Snippet must be between 15 and 30 seconds long.");
   }
+}
 
-  // Ensure profile exists (uses onConflictDoNothing so it's safe to run first)
+/**
+ * Legacy action: creates a draft track without context or credit deduction.
+ * Kept for backward compatibility.
+ */
+export async function createTrack(data: {
+  title: string;
+  audioFilename: string;
+  duration: number;
+  genreTags: string[];
+  snippetStart: number;
+  snippetEnd: number;
+}) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) throw new Error("Unauthorized");
+
+  const userId = session.user.id;
+
+  validateTrackInputs(data);
+
   await ensureProfile(userId, session.user.name);
 
   const shareToken = randomBytes(8).toString("hex");
 
-  // Atomically claim the upload: UPDATE ... WHERE consumed = false ensures
-  // only one concurrent caller can succeed (the other matches 0 rows).
   const [claimed] = await db
     .update(uploads)
     .set({ consumed: true })
@@ -110,7 +134,7 @@ export async function createTrack(data: {
         eq(uploads.filename, data.audioFilename),
         eq(uploads.userId, userId),
         eq(uploads.consumed, false),
-      )
+      ),
     )
     .returning({ id: uploads.id });
 
@@ -135,7 +159,130 @@ export async function createTrack(data: {
     })
     .returning();
 
-  // Increment tracks_uploaded
+  await db
+    .update(profiles)
+    .set({ tracksUploaded: sql`${profiles.tracksUploaded} + 1` })
+    .where(eq(profiles.id, userId));
+
+  return track;
+}
+
+/**
+ * Unified action: uploads, sets context, production stage, and deducts credits
+ * in a single call. The track goes directly to "collecting" status — no draft
+ * intermediate. This prevents orphaned uploads when users lack credits.
+ */
+export async function createAndSubmitTrack(data: {
+  title: string;
+  audioFilename: string;
+  duration: number;
+  genreTags: string[];
+  snippetStart: number;
+  snippetEnd: number;
+  productionStage: string;
+  contextId: string;
+  packageIndex: number;
+}) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) throw new Error("Unauthorized");
+
+  const userId = session.user.id;
+
+  // --- Validate all inputs ---
+
+  validateTrackInputs(data);
+
+  // Production stage
+  if (!VALID_STAGE_IDS.has(data.productionStage)) {
+    throw new Error("Invalid production stage");
+  }
+
+  // Context
+  if (!getContextById(data.contextId)) {
+    throw new Error("Invalid context");
+  }
+
+  // Vote package
+  const votePackage = VOTE_PACKAGES[data.packageIndex];
+  if (!votePackage) throw new Error("Invalid vote package");
+
+  const { votes: votesRequested, credits: creditsCost } = votePackage;
+
+  // --- Execute ---
+
+  await ensureProfile(userId, session.user.name);
+
+  const shareToken = randomBytes(8).toString("hex");
+
+  // 1. Atomically claim the upload
+  const [claimed] = await db
+    .update(uploads)
+    .set({ consumed: true })
+    .where(
+      and(
+        eq(uploads.filename, data.audioFilename),
+        eq(uploads.userId, userId),
+        eq(uploads.consumed, false),
+      ),
+    )
+    .returning({ id: uploads.id });
+
+  if (!claimed) {
+    throw new Error(
+      "Audio file not found. Please upload the file before creating a track.",
+    );
+  }
+
+  // 2. Insert track directly as "collecting"
+  const [track] = await db
+    .insert(tracks)
+    .values({
+      userId,
+      title: data.title,
+      audioFilename: data.audioFilename,
+      duration: data.duration,
+      genreTags: data.genreTags,
+      snippetStart: data.snippetStart,
+      snippetEnd: data.snippetEnd,
+      productionStage: data.productionStage,
+      contextId: data.contextId,
+      votesRequested,
+      shareToken,
+      status: "collecting",
+    })
+    .returning();
+
+  // 3. Atomically deduct credits
+  if (creditsCost > 0) {
+    const [deducted] = await db
+      .update(profiles)
+      .set({ credits: sql`${profiles.credits} - ${creditsCost}` })
+      .where(and(eq(profiles.id, userId), gte(profiles.credits, creditsCost)))
+      .returning({ id: profiles.id });
+
+    if (!deducted) {
+      // Roll back: delete the track and unclaim the upload
+      await db
+        .update(tracks)
+        .set({ isDeleted: true })
+        .where(eq(tracks.id, track.id));
+      await db
+        .update(uploads)
+        .set({ consumed: false })
+        .where(eq(uploads.id, claimed.id));
+      throw new Error("Insufficient credits");
+    }
+
+    // Log credit transaction
+    await db.insert(creditTransactions).values({
+      userId,
+      amount: -creditsCost,
+      type: "track_submit",
+      referenceId: track.id,
+    });
+  }
+
+  // 4. Increment tracks_uploaded
   await db
     .update(profiles)
     .set({ tracksUploaded: sql`${profiles.tracksUploaded} + 1` })

@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 bun dev          # Start dev server (localhost:3000)
 bun run build    # Production build
+bun start        # Start production server
 bun run lint     # ESLint (next core-web-vitals + typescript)
 ```
 
@@ -36,7 +37,7 @@ bunx shadcn@latest add <component-name>
 - **Drizzle ORM** with `@neondatabase/serverless` (neon-http driver), migrations in `db/migrations/`
 - **better-auth** with Google OAuth
 - **Vercel Blob** for audio file storage
-- **AI SDK** (`ai` + `@ai-sdk/react`) with Zod for validation
+- **AI SDK** (`ai` + `@ai-sdk/react`) with **Zod v4** for validation (API differs from v3)
 - **bun** as the package manager (lockfile: `bun.lock`)
 
 ## Architecture
@@ -64,7 +65,7 @@ app/
 ### Data Layer
 
 **Server Actions** (`lib/actions/`):
-- `upload.ts` — `createTrack()`: validates input, claims upload in atomic transaction, creates track
+- `upload.ts` — `createTrack()`: legacy draft flow; `createAndSubmitTrack()`: unified flow that validates input, claims upload, inserts track as "collecting", and deducts credits atomically (with rollback on failure)
 - `rate.ts` — `submitRating()`: inserts rating, updates stats, awards duration-based credits per rating; `computeTrackScores()`: averages dimensions, calculates percentile
 - `context.ts` — `submitForRating()`: deducts credits + sets track to "collecting" in atomic transaction; `getUserProfileData()`
 - `track.ts` — `deleteTrack()`: soft-deletes track + removes blob from Vercel storage
@@ -72,7 +73,7 @@ app/
 
 **Queries** (`lib/queries/`):
 - `profiles.ts` — `getProfile()`, `getTracksByUser()`, `ensureProfile()`
-- `tracks.ts` — `getNextTrackToRate()`, `getTrackById()`, `getTrackByShareToken()`
+- `tracks.ts` — `getNextTrackToRate()` (NOT EXISTS subquery for unrated filter), `getTrackById()`, `getTrackByShareToken()`, `getTopTracks()`
 - `ratings.ts` — `getTrackRatings()`, `computeDimensionAverages()`, `getAIInsights()`, `generateInsights()` (legacy fallback)
 
 ### Database Schema (`lib/db/schema.ts`)
@@ -148,9 +149,15 @@ The project uses `drizzle-orm/neon-http` which does **not** support `db.transact
 - `storageUpload(filename, file)` — Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set, otherwise local filesystem (`public/uploads/`)
 - `storageDelete(urls)` — batch delete with path traversal protection via `safePublicPath()`
 
-### Audio/Waveform (`lib/audio-context.ts`)
+### Audio Processing
 
-Single shared `AudioContext` (browser limit ~6). Waveform data cached by `${url}:${barCount}` with LRU eviction (max 64 entries).
+**Waveform** (`lib/audio-context.ts`): Single shared `AudioContext` (browser limit ~6). Waveform data cached by `${url}:${barCount}` with LRU eviction (max 64 entries).
+
+**Clip Encoding** (`lib/audio-clip.ts`): Client-side audio trimming + MP3 encoding via `mediabunny` / `@mediabunny/mp3-encoder`. Output: mono, 128kbps, 44.1kHz (~480KB for 30s, ~240KB for 15s).
+
+### Production Stages (`lib/constants/production-stages.ts`)
+
+Tracks have a production stage: Demo, Mixed, or Mastered — displayed with emoji indicators and tooltips.
 
 ## Environment Variables
 
@@ -171,3 +178,6 @@ See `.env.example`:
 - CSS theming uses oklch color space with CSS custom properties and `.dark` class for dark mode
 - Server-side session: `getSession()` from `lib/auth-session.ts`. Client-side: `useAuth()` from `components/auth-provider.tsx`
 - All multi-step mutations use `db.batch()` or sequential queries with atomic WHERE guards (no `db.transaction()` — see Neon HTTP constraints above)
+- `proxy.ts` exists at project root but is dead code (references `/dashboard` routes that don't exist) — ignore it
+- Root layout applies `pb-20` for bottom nav clearance — account for this when adding full-height layouts
+- No test infrastructure or CI/CD — project has no tests, no vitest/jest config, no `.github/workflows`

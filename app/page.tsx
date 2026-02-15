@@ -7,8 +7,16 @@ import {
   UserMultipleIcon,
   ChartLineData01Icon,
 } from "@hugeicons/core-free-icons";
+import { getTopTracks } from "@/lib/queries/tracks";
+import { LeaderboardSection } from "@/components/leaderboard-section";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  let topTracks: Awaited<ReturnType<typeof getTopTracks>> = [];
+  try {
+    topTracks = await getTopTracks();
+  } catch {
+    // DB failure shouldn't take down the landing page — leaderboard is optional
+  }
   return (
     <div className="flex flex-col items-center px-6 pt-6 pb-8">
       {/* Logo */}
@@ -79,6 +87,9 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      {/* Top Tracks Leaderboard */}
+      <LeaderboardSection tracks={topTracks} />
 
       {/* Social Proof */}
       <section className="mt-8 text-center">

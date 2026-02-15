@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 bun dev          # Start dev server (localhost:3000)
 bun run build    # Production build
+bun start        # Start production server
 bun run lint     # ESLint (next core-web-vitals + typescript)
 ```
 
@@ -148,9 +149,15 @@ The project uses `drizzle-orm/neon-http` which does **not** support `db.transact
 - `storageUpload(filename, file)` — Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set, otherwise local filesystem (`public/uploads/`)
 - `storageDelete(urls)` — batch delete with path traversal protection via `safePublicPath()`
 
-### Audio/Waveform (`lib/audio-context.ts`)
+### Audio Processing
 
-Single shared `AudioContext` (browser limit ~6). Waveform data cached by `${url}:${barCount}` with LRU eviction (max 64 entries).
+**Waveform** (`lib/audio-context.ts`): Single shared `AudioContext` (browser limit ~6). Waveform data cached by `${url}:${barCount}` with LRU eviction (max 64 entries).
+
+**Clip Encoding** (`lib/audio-clip.ts`): Client-side audio trimming + MP3 encoding via `mediabunny` / `@mediabunny/mp3-encoder`. Output: mono, 128kbps, 44.1kHz (~480KB for 30s, ~240KB for 15s).
+
+### Production Stages (`lib/constants/production-stages.ts`)
+
+Tracks have a production stage: Demo, Mixed, or Mastered — displayed with emoji indicators and tooltips.
 
 ## Environment Variables
 
@@ -171,3 +178,4 @@ See `.env.example`:
 - CSS theming uses oklch color space with CSS custom properties and `.dark` class for dark mode
 - Server-side session: `getSession()` from `lib/auth-session.ts`. Client-side: `useAuth()` from `components/auth-provider.tsx`
 - All multi-step mutations use `db.batch()` or sequential queries with atomic WHERE guards (no `db.transaction()` — see Neon HTTP constraints above)
+- `proxy.ts` exists at project root but is dead code (references `/dashboard` routes that don't exist) — ignore it

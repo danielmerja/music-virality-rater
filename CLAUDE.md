@@ -128,7 +128,7 @@ const { requireAuth } = useAuth()
 Fire-and-forget AI-powered insights generated at vote milestones (5, 10, 20, 50). Called from `submitRating()` when `votesReceived` hits a milestone.
 
 - Uses Claude Opus 4.6 via AI SDK with Zod structured output
-- Generates 2–4 insights per milestone (categories: TARGET AUDIENCE, SIMILAR TRACKS, SUGGESTION, STRENGTH, OPPORTUNITY)
+- Generates 2–5 insights per milestone (5→2, 10→3, 20→4, 50→5; categories: TARGET AUDIENCE, SIMILAR TRACKS, SUGGESTION, STRENGTH, OPPORTUNITY)
 - Sanitizes user-controlled text (title, tags, feedback) before prompt interpolation to prevent injection
 - Stored in `aiInsights` table with `onConflictDoNothing()` for idempotency
 - Type: `AIInsight` (exported, Zod-inferred)

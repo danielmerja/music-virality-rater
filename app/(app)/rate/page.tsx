@@ -10,6 +10,7 @@ import { RatingTrackColumns } from "@/components/rating-track-columns";
 import { useAuth } from "@/components/auth-provider";
 import { getContextById, type Dimension } from "@/lib/constants/contexts";
 import { submitRating } from "@/lib/actions/rate";
+import { Logo } from "@/components/logo";
 
 interface TrackToRate {
   id: string;
@@ -133,6 +134,7 @@ export default function RatePage() {
   if (noTracks || !track) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 text-center">
+        <Logo className="text-2xl" />
         <p className="text-lg font-medium">No tracks to rate right now</p>
         <p className="text-sm text-muted-foreground">
           Check back later — new tracks are submitted all the time!
@@ -143,6 +145,10 @@ export default function RatePage() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
+      <div className="mb-6 flex justify-center">
+        <Logo className="text-2xl" />
+      </div>
+
       {/* Context badge + track count */}
       <div className="mb-4 flex items-center justify-between">
         {context && (

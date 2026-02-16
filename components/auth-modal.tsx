@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { signIn } from "@/lib/auth-client"
 import { useAuth } from "@/components/auth-provider"
 import {
@@ -34,8 +35,68 @@ function GoogleIcon() {
   )
 }
 
+function detectInAppBrowser(): { isInApp: boolean; appName: string } {
+  if (typeof navigator === "undefined") return { isInApp: false, appName: "" }
+
+  const ua = navigator.userAgent || ""
+
+  // Common in-app browser identifiers
+  if (/FBAN|FBAV|FB_IAB/i.test(ua)) return { isInApp: true, appName: "Facebook" }
+  if (/Instagram/i.test(ua)) return { isInApp: true, appName: "Instagram" }
+  if (/Messenger/i.test(ua)) return { isInApp: true, appName: "Messenger" }
+  if (/Twitter|X\//i.test(ua)) return { isInApp: true, appName: "X (Twitter)" }
+  if (/Snapchat/i.test(ua)) return { isInApp: true, appName: "Snapchat" }
+  if (/LinkedIn/i.test(ua)) return { isInApp: true, appName: "LinkedIn" }
+  if (/TikTok|BytedanceWebview|musical_ly/i.test(ua)) return { isInApp: true, appName: "TikTok" }
+  if (/Discord/i.test(ua)) return { isInApp: true, appName: "Discord" }
+  if (/Slack/i.test(ua)) return { isInApp: true, appName: "Slack" }
+  if (/Telegram/i.test(ua)) return { isInApp: true, appName: "Telegram" }
+  if (/WhatsApp/i.test(ua)) return { isInApp: true, appName: "WhatsApp" }
+  if (/Line\//i.test(ua)) return { isInApp: true, appName: "LINE" }
+  if (/WeChat|MicroMessenger/i.test(ua)) return { isInApp: true, appName: "WeChat" }
+
+  // Generic WebView detection (Android WebView or iOS UIWebView/WKWebView patterns)
+  if (/\bwv\b/i.test(ua) || /WebView/i.test(ua)) return { isInApp: true, appName: "this app" }
+
+  return { isInApp: false, appName: "" }
+}
+
+function InAppBrowserWarning({ appName }: { appName: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="space-y-4 py-2">
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-center text-sm text-amber-200">
+        <p className="font-medium">
+          Google sign-in doesn&apos;t work inside {appName}&apos;s browser.
+        </p>
+        <p className="mt-1 text-amber-200/70">
+          Open this page in Safari or Chrome to sign in.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Button variant="outline" className="w-full gap-2" onClick={handleCopyLink}>
+          {copied ? "Copied!" : "Copy link to open in browser"}
+        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          Tap <strong>&#8943;</strong> or <strong>Open in Browser</strong> in {appName} to switch.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function AuthModal() {
   const { isAuthModalOpen, closeAuthModal } = useAuth()
+  const [inAppInfo] = useState(() => detectInAppBrowser())
 
   return (
     <Dialog open={isAuthModalOpen} onOpenChange={(open) => !open && closeAuthModal()}>
@@ -48,21 +109,25 @@ export function AuthModal() {
             Sign in to rate songs, save your favorites, and more.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-2">
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={() =>
-              signIn.social({
-                provider: "google",
-                callbackURL: window.location.href,
-              })
-            }
-          >
-            <GoogleIcon />
-            Continue with Google
-          </Button>
-        </div>
+        {inAppInfo.isInApp ? (
+          <InAppBrowserWarning appName={inAppInfo.appName} />
+        ) : (
+          <div className="py-2">
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() =>
+                signIn.social({
+                  provider: "google",
+                  callbackURL: window.location.href,
+                })
+              }
+            >
+              <GoogleIcon />
+              Continue with Google
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )

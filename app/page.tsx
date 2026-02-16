@@ -106,6 +106,15 @@ export default async function LandingPage() {
         <p className="mt-1.5 text-xs italic text-muted-foreground">
           &ldquo;Finally, honest feedback before I release&rdquo;
         </p>
+        <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-muted-foreground/60">
+          <Link href="/privacy" className="underline hover:text-muted-foreground">
+            Privacy Policy
+          </Link>
+          <span>&middot;</span>
+          <Link href="/terms" className="underline hover:text-muted-foreground">
+            Terms of Service
+          </Link>
+        </div>
       </section>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -533,8 +534,14 @@ export default function UploadPage() {
               id="tos"
             />
             <label htmlFor="tos" className="text-sm text-muted-foreground">
-              I confirm I have the rights to this track and agree to the Terms of
-              Service.
+              I confirm I have the rights to this track and agree to the{" "}
+              <Link href="/terms" className="underline hover:text-foreground" target="_blank">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="underline hover:text-foreground" target="_blank">
+                Privacy Policy
+              </Link>.
             </label>
           </div>
 

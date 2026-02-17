@@ -160,8 +160,10 @@ export const aiInsights = pgTable(
       .notNull()
       .references(() => tracks.id),
     milestone: integer("milestone").notNull(), // 5, 10, 20, or 50
-    insights: text("insights").notNull(), // JSON string of insight array
+    insights: text("insights").notNull().default("[]"), // JSON string of insight array
+    status: text("status").notNull().default("pending"), // 'pending' | 'complete' | 'failed'
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [unique("ai_insights_track_milestone").on(t.trackId, t.milestone)]
 );

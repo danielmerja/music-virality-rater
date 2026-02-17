@@ -15,6 +15,13 @@
       "when": 1771135078090,
       "tag": "0001_breezy_albert_cleary",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771354598108,
+      "tag": "0002_shiny_fixer",
+      "breakpoints": true
     }
   ]
 }

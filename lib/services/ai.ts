@@ -3,7 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { tracks, ratings, aiInsights } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { getContextById } from "@/lib/constants/contexts";
 import { getProductionStageById } from "@/lib/constants/production-stages";
 import { computeDimensionAverages } from "@/lib/queries/ratings";
@@ -12,6 +12,8 @@ import { computeDimensionAverages } from "@/lib/queries/ratings";
 const MAX_TITLE_LENGTH = 200;
 const MAX_TAG_LENGTH = 50;
 const MAX_FEEDBACK_LENGTH = 500;
+
+const AI_MILESTONES = [5, 10, 20, 50] as const;
 
 /**
  * Sanitize user-controlled text before interpolating into an LLM prompt.
@@ -63,23 +65,53 @@ export async function generateAIInsights(
   milestone: number
 ): Promise<void> {
   // Guard: only generate for valid milestones
-  if (![5, 10, 20, 50].includes(milestone)) return;
+  if (!(AI_MILESTONES as readonly number[]).includes(milestone)) return;
 
-  // Check if insights already exist for this track + milestone (idempotency)
+  // Check if insights already exist and are complete for this track + milestone (idempotency).
+  // We only skip if status is 'complete' — 'pending' or 'failed' rows can be retried.
   const existing = await db.query.aiInsights.findFirst({
     where: and(
       eq(aiInsights.trackId, trackId),
       eq(aiInsights.milestone, milestone)
     ),
-    columns: { id: true },
+    columns: { id: true, status: true },
   });
-  if (existing) return;
+  if (existing?.status === "complete") return;
+
+  // Upsert a 'pending' row immediately so we have a record that generation was triggered.
+  // If a row already exists (pending/failed), update it back to pending for the retry.
+  let insightRowId: string | undefined;
+  try {
+    const [upserted] = await db
+      .insert(aiInsights)
+      .values({
+        trackId,
+        milestone,
+        insights: "[]",
+        status: "pending",
+      })
+      .onConflictDoUpdate({
+        target: [aiInsights.trackId, aiInsights.milestone],
+        set: { status: "pending", updatedAt: new Date() },
+      })
+      .returning({ id: aiInsights.id });
+    insightRowId = upserted?.id;
+  } catch (error) {
+    console.error(
+      `[AI Insights] Failed to upsert pending row for track ${trackId} at milestone ${milestone}:`,
+      error
+    );
+    return;
+  }
 
   // Fetch track details
   const track = await db.query.tracks.findFirst({
     where: eq(tracks.id, trackId),
   });
-  if (!track) return;
+  if (!track) {
+    await markInsightFailed(insightRowId);
+    return;
+  }
 
   // Fetch context and dimensions
   const context = track.contextId ? getContextById(track.contextId) : null;
@@ -90,7 +122,10 @@ export async function generateAIInsights(
   const trackRatings = await db.query.ratings.findMany({
     where: eq(ratings.trackId, trackId),
   });
-  if (trackRatings.length === 0) return;
+  if (trackRatings.length === 0) {
+    await markInsightFailed(insightRowId);
+    return;
+  }
 
   // Compute dimension averages
   const dimensionAverages = computeDimensionAverages(trackRatings);
@@ -171,21 +206,89 @@ BREVITY IS CRITICAL. Each insight description must be 1-2 short sentences max (~
       prompt,
     });
 
-    if (!output || output.length === 0) return;
+    if (!output || output.length === 0) {
+      await markInsightFailed(insightRowId);
+      return;
+    }
 
-    // Store insights in the database
-    await db
-      .insert(aiInsights)
-      .values({
-        trackId,
-        milestone,
-        insights: JSON.stringify(output),
-      })
-      .onConflictDoNothing(); // idempotency guard
+    // Update the pending row to complete with the generated insights
+    if (insightRowId) {
+      await db
+        .update(aiInsights)
+        .set({
+          insights: JSON.stringify(output),
+          status: "complete",
+          updatedAt: new Date(),
+        })
+        .where(eq(aiInsights.id, insightRowId));
+    }
   } catch (error) {
     console.error(
       `[AI Insights] Failed to generate for track ${trackId} at milestone ${milestone}:`,
       error
+    );
+    await markInsightFailed(insightRowId);
+  }
+}
+
+/**
+ * Mark an insight row as failed. Safe to call with undefined id.
+ */
+async function markInsightFailed(insightRowId: string | undefined): Promise<void> {
+  if (!insightRowId) return;
+  try {
+    await db
+      .update(aiInsights)
+      .set({ status: "failed", updatedAt: new Date() })
+      .where(eq(aiInsights.id, insightRowId));
+  } catch {
+    // best-effort — don't throw
+  }
+}
+
+/**
+ * Trigger AI insight generation for any milestones a track has passed but not yet
+ * successfully completed. This is a backfill mechanism for tracks that missed a
+ * milestone trigger (e.g. due to a transient error or milestone being skipped).
+ *
+ * Call this fire-and-forget alongside the exact-match milestone check in submitRating.
+ */
+export async function triggerMissingAIInsights(
+  trackId: string,
+  votesReceived: number
+): Promise<void> {
+  // Find all milestones the track has already passed
+  const passedMilestones = (AI_MILESTONES as readonly number[]).filter(
+    (m) => votesReceived >= m
+  );
+  if (passedMilestones.length === 0) return;
+
+  // Fetch existing complete insight rows for this track
+  const existingComplete = await db.query.aiInsights.findMany({
+    where: and(
+      eq(aiInsights.trackId, trackId),
+      inArray(aiInsights.milestone, [...passedMilestones])
+    ),
+    columns: { milestone: true, status: true },
+  });
+
+  const completedMilestones = new Set(
+    existingComplete
+      .filter((r) => r.status === "complete")
+      .map((r) => r.milestone)
+  );
+
+  // Generate for any passed milestone that doesn't have a complete row
+  const missingMilestones = passedMilestones.filter(
+    (m) => !completedMilestones.has(m)
+  );
+
+  for (const milestone of missingMilestones) {
+    generateAIInsights(trackId, milestone).catch((err) =>
+      console.error(
+        `[AI Insights] Backfill failed for track ${trackId} at milestone ${milestone}:`,
+        err
+      )
     );
   }
 }

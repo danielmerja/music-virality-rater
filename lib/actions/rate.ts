@@ -5,7 +5,7 @@ import { ratings, tracks, profiles, creditTransactions } from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { eq, sql, and } from "drizzle-orm";
-import { generateAIInsights } from "@/lib/services/ai";
+import { generateAIInsights, triggerMissingAIInsights } from "@/lib/services/ai";
 
 // --- Constants ---
 const MIN_SCORE = 0;
@@ -97,6 +97,14 @@ export async function submitRating(data: {
   ) {
     generateAIInsights(data.trackId, updatedTrack.votesReceived).catch(
       (err) => console.error("[AI Insights] Background generation failed:", err)
+    );
+  }
+
+  // Backfill: also catch up any milestones that were previously missed (e.g. due to
+  // transient errors or a vote counter that skipped past a milestone).
+  if (updatedTrack) {
+    triggerMissingAIInsights(data.trackId, updatedTrack.votesReceived).catch(
+      (err) => console.error("[AI Insights] Backfill trigger failed:", err)
     );
   }
 
